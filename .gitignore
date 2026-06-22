@@ -1,0 +1,17 @@
+.DS_Store
+.idea
+.vscode
+node_modules/
+*.log
+.env
+.env.*
+!.env.example
+extensiones/logs/*
+!extensiones/logs/.gitkeep
+vistas/img/usuarios/*
+!vistas/img/usuarios/default/
+vistas/img/productos/*
+!vistas/img/productos/default/
+vistas/img/servicios_taller/*
+vistas/img/facturas_compras/*
+vistas/img/web-publicaciones/*
