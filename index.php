@@ -15,6 +15,7 @@ require_once "controladores/logs.controlador.php";
 require_once "controladores/caja.controlador.php";
 require_once "controladores/web-publicaciones.controlador.php";
 require_once "controladores/web-consultas.controlador.php";
+require_once "controladores/empresa-boletas.controlador.php";
 
 
 require_once "modelos/usuarios.modelo.php";

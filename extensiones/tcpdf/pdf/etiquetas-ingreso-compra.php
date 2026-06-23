@@ -18,12 +18,13 @@ $idCompra = (int)($_GET["compra"] ?? 0);
 $idProducto = (int)($_GET["producto"] ?? 0);
 $etiquetas = ModeloInventario::mdlEtiquetasIngresoCompra($idCompra, $idProducto);
 if (!$etiquetas) {
-    die("Esta recepción todavía no tiene códigos registrados para imprimir.");
+    die("Esta recepciГіn todavГ­a no tiene cГіdigos registrados para imprimir.");
 }
 
 $producto = $etiquetas[0];
 chdir(__DIR__);
 require_once "tcpdf_include_notaventa.php";
+require_once __DIR__ . '/pdf-empresa-config.php';
 
 $pdf = new TCPDF("P", "mm", "A4", true, "UTF-8", false);
 $pdf->SetCreator("TechMind");
@@ -84,7 +85,7 @@ foreach ($etiquetas as $indice => $item) {
     $pdf->SetTextColor(24, 75, 134);
     $pdf->SetFont("helvetica", "B", 7.5);
     $pdf->SetXY($x + 2, $y + 1.8);
-    $pdf->Cell($ancho - 4, 4, "TECHMIND S.R.L.", 0, 0, "C");
+    $pdf->Cell($ancho - 4, 4, tmPdfEmpresaTexto('nombre'), 0, 0, "C");
     $pdf->SetTextColor(28, 43, 56);
     $pdf->SetFont("helvetica", "B", 6.5);
     $pdf->SetXY($x + 2.5, $y + 5.5);
@@ -99,8 +100,8 @@ foreach ($etiquetas as $indice => $item) {
     $pdf->SetXY($x + 2, $y + 31);
     $pdf->Cell($ancho - 4, 3, "General: ".$codigoGeneral, 0, 0, "C");
     $pdf->SetXY($x + 2, $y + 34);
-    $origen = $item["origen"] === "generado" ? "Código TechMind" : "Código escaneado";
-    $pdf->Cell($ancho - 4, 3, $origen." · Compra ".$producto["codigo_compra"], 0, 0, "C");
+    $origen = $item["origen"] === "generado" ? "CГіdigo TechMind" : "CГіdigo escaneado";
+    $pdf->Cell($ancho - 4, 3, $origen." В· Compra ".$producto["codigo_compra"], 0, 0, "C");
 }
 
 ob_end_clean();

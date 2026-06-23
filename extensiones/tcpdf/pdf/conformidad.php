@@ -19,6 +19,7 @@ function RotatedTextControlEntrega($pdf, $x, $y, $txt, $angle) {
 
 chdir(__DIR__);
 require_once('tcpdf_include_notaventa.php');
+require_once __DIR__ . '/pdf-empresa-config.php';
 
 $idVenta = isset($_GET["idVenta"]) && is_numeric($_GET["idVenta"]) ? (int)$_GET["idVenta"] : 0;
 $venta = ControladorVentas::ctrMostrarVentas("id", $idVenta);
@@ -58,14 +59,14 @@ $pdf->Image('images/ICONO.png', 17, 13, 21);
 $pdf->SetXY(40, 14);
 $pdf->SetFont('helvetica', 'B', 14);
 $pdf->SetTextColor(70, 130, 180);
-$pdf->Cell(90, 7, 'TECHMIND S.R.L.', 0, 1, 'L');
+$pdf->Cell(90, 7, tmPdfEmpresaTexto('nombre'), 0, 1, 'L');
 $pdf->SetFont('helvetica', '', 9);
 $pdf->SetX(40);
-$pdf->Cell(90, 5, 'Km 6 doble via la guardia, calle paraiso Nro 6387', 0, 1, 'L');
+$pdf->Cell(90, 5, tmPdfEmpresaTexto('direccion'), 0, 1, 'L');
 $pdf->SetX(40);
-$pdf->Cell(90, 5, '(+591) 75556540 | (+591) 78572656', 0, 1, 'L');
+$pdf->Cell(90, 5, tmPdfEmpresaTexto('telefono'), 0, 1, 'L');
 $pdf->SetX(40);
-$pdf->Cell(90, 5, 'techmind.srl.bo@gmail.com', 0, 1, 'L');
+$pdf->Cell(90, 5, tmPdfEmpresaTexto('correo'), 0, 1, 'L');
 
 $pdf->SetXY(130, 12);
 $pdf->SetFont('helvetica', 'B', 13);

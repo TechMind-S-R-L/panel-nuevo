@@ -80,6 +80,18 @@ class ModeloWebPublicaciones{
 		$db->exec(
 			"INSERT IGNORE INTO web_configuracion(clave,valor) VALUES ('web_correo','techmind.srl.bo@gmail.com')"
 		);
+		$db->exec(
+			"INSERT IGNORE INTO web_configuracion(clave,valor) VALUES ('boletas_empresa_nombre','TECHMIND S.R.L.')"
+		);
+		$db->exec(
+			"INSERT IGNORE INTO web_configuracion(clave,valor) VALUES ('boletas_empresa_direccion','Km 6 doble via la guardia, calle paraiso Nro 6387')"
+		);
+		$db->exec(
+			"INSERT IGNORE INTO web_configuracion(clave,valor) VALUES ('boletas_empresa_telefono','(+591) 75556540 | (+591) 78572656')"
+		);
+		$db->exec(
+			"INSERT IGNORE INTO web_configuracion(clave,valor) VALUES ('boletas_empresa_correo','techmind.srl.bo@gmail.com')"
+		);
 		self::mdlSincronizarVigencias($db);
 	}
 

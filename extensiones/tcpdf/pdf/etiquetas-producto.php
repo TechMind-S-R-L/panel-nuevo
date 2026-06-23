@@ -22,11 +22,12 @@ if (!$producto) {
 
 $codigos = $producto["codigos_etiqueta"] ?? [];
 if (!$codigos) {
-    die("El producto todavía no tiene códigos preparados para impresión.");
+    die("El producto todavГ­a no tiene cГіdigos preparados para impresiГіn.");
 }
 
 chdir(__DIR__);
 require_once "tcpdf_include_notaventa.php";
+require_once __DIR__ . '/pdf-empresa-config.php';
 
 $pdf = new TCPDF("P", "mm", "A4", true, "UTF-8", false);
 $pdf->SetCreator("TechMind");
@@ -87,7 +88,7 @@ foreach ($codigos as $indice => $item) {
     $pdf->SetTextColor(24, 75, 134);
     $pdf->SetFont("helvetica", "B", 7.5);
     $pdf->SetXY($x + 2, $y + 1.8);
-    $pdf->Cell($ancho - 4, 4, "TECHMIND S.R.L.", 0, 0, "C");
+    $pdf->Cell($ancho - 4, 4, tmPdfEmpresaTexto('nombre'), 0, 0, "C");
     $pdf->SetTextColor(28, 43, 56);
     $pdf->SetFont("helvetica", "B", 6.5);
     $pdf->SetXY($x + 2.5, $y + 5.5);
@@ -101,12 +102,12 @@ foreach ($codigos as $indice => $item) {
     $pdf->SetFont("helvetica", "", 5.7);
     $pdf->SetXY($x + 2, $y + 31);
     $textoPrecio = (float)$producto["precio_venta"] > 0
-        ? " · Bs ".number_format((float)$producto["precio_venta"], 2)
+        ? " В· Bs ".number_format((float)$producto["precio_venta"], 2)
         : "";
     $pdf->Cell($ancho - 4, 3, "General: ".$codigoGeneral.$textoPrecio, 0, 0, "C");
     $pdf->SetXY($x + 2, $y + 34);
     $tipo = ($item["estado"] ?? "") === "etiqueta_general" ? "Etiqueta general" : "Unidad ".($indice + 1);
-    $pdf->Cell($ancho - 4, 3, $tipo." · Producto #".$idProducto, 0, 0, "C");
+    $pdf->Cell($ancho - 4, 3, $tipo." В· Producto #".$idProducto, 0, 0, "C");
 }
 
 ob_end_clean();

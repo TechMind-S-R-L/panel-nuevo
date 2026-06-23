@@ -2266,6 +2266,7 @@ if($perfilMenu == "Administrador"){
           <a href="#"><i class="fa fa-cogs"></i> <span>Administracion</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
           <ul class="treeview-menu">
             <li><a href="usuarios"><i class="fa fa-user"></i> Usuarios</a></li>
+            <li><a href="datos-boletas"><i class="fa fa-file-text-o"></i> Datos de boletas</a></li>
             <li><a href="reportes"><i class="fa fa-bar-chart-o"></i> Reportes</a></li>
             <li><a href="logs-sistema"><i class="fa fa-history"></i> Logs del sistema</a></li>
           </ul>

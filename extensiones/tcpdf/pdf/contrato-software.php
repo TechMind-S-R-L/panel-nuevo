@@ -14,6 +14,7 @@ function contratoTxt($valor){ return htmlspecialchars((string)$valor, ENT_QUOTES
 
 chdir(__DIR__);
 require_once('tcpdf_include_notaventa.php');
+require_once __DIR__ . '/pdf-empresa-config.php';
 
 class ContratoSoftwarePDF extends TCPDF {
 	public $codigoContrato = "";
@@ -30,12 +31,14 @@ class ContratoSoftwarePDF extends TCPDF {
 		$this->SetXY(40, 14);
 		$this->SetFont('helvetica', 'B', 14);
 		$this->SetTextColor(70, 130, 180);
-		$this->Cell(90, 7, 'TECHMIND S.R.L.', 0, 1, 'L');
+		$this->Cell(90, 7, tmPdfEmpresaTexto('nombre'), 0, 1, 'L');
 		$this->SetFont('helvetica', '', 9);
 		$this->SetX(40);
-		$this->Cell(90, 5, 'Km 6 doble via la guardia, calle paraiso Nro 6387', 0, 1, 'L');
+		$this->Cell(90, 5, tmPdfEmpresaTexto('direccion'), 0, 1, 'L');
 		$this->SetX(40);
-		$this->Cell(90, 5, '(+591) 75556540 | (+591) 78572656', 0, 1, 'L');
+		$this->Cell(90, 5, tmPdfEmpresaTexto('telefono'), 0, 1, 'L');
+		$this->SetX(40);
+		$this->Cell(90, 5, tmPdfEmpresaTexto('correo'), 0, 1, 'L');
 
 		$this->SetXY(120, 14);
 		$this->SetFont('helvetica', 'B', 13);
@@ -54,7 +57,7 @@ class ContratoSoftwarePDF extends TCPDF {
 		$this->Line(10, 283, 200, 283);
 		$this->SetFont('helvetica', '', 8);
 		$this->SetTextColor(90, 110, 120);
-		$this->Cell(95, 6, 'TechMind S.R.L. - Contrato de desarrollo de software', 0, 0, 'L');
+		$this->Cell(95, 6, tmPdfEmpresaTexto('nombre').' - Contrato de desarrollo de software', 0, 0, 'L');
 		$this->Cell(95, 6, 'Pagina '.$this->getAliasNumPage().' de '.$this->getAliasNbPages(), 0, 0, 'R');
 		$this->SetTextColor(0);
 	}
@@ -93,7 +96,7 @@ $html = '
 </table>
 
 <h4>1. Objeto del contrato</h4>
-<p>TECHMIND S.R.L. se compromete a desarrollar para EL CLIENTE el proyecto descrito como <b>'.contratoTxt($proyecto["nombre_proyecto"]).'</b>, de tipo <b>'.contratoTxt($proyecto["tipo_software"]).'</b>, conforme al alcance inicial definido en este documento.</p>
+<p>'.contratoTxt(tmPdfEmpresaTexto('nombre')).' se compromete a desarrollar para EL CLIENTE el proyecto descrito como <b>'.contratoTxt($proyecto["nombre_proyecto"]).'</b>, de tipo <b>'.contratoTxt($proyecto["tipo_software"]).'</b>, conforme al alcance inicial definido en este documento.</p>
 
 <h4>2. Alcance inicial</h4>
 <p>'.nl2br(contratoTxt($proyecto["alcance"])).'</p>

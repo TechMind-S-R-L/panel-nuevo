@@ -10,6 +10,7 @@ require_once __DIR__ . "/../../../modelos/usuarios.modelo.php";
 
 chdir(__DIR__);
 require_once('tcpdf_include_notaventa.php');
+require_once __DIR__ . '/pdf-empresa-config.php';
 
 $idServicio = isset($_GET["idServicio"]) ? (int)$_GET["idServicio"] : 0;
 $servicio = ControladorServicios::ctrMostrarServicios("id", $idServicio);
@@ -27,7 +28,7 @@ $pdf->Image('images/ICONO.png', 17, 13, 21);
 $pdf->SetXY(40, 14);
 $pdf->SetFont('helvetica', 'B', 14);
 $pdf->SetTextColor(70, 130, 180);
-$pdf->Cell(90, 7, 'TECHMIND S.R.L.', 0, 1, 'L');
+$pdf->Cell(90, 7, tmPdfEmpresaTexto('nombre'), 0, 1, 'L');
 $pdf->SetFont('helvetica', '', 9);
 $pdf->SetX(40);
 $pdf->Cell(90, 5, 'ORDEN PARA TECNICO', 0, 1, 'L');
