@@ -106,13 +106,20 @@ class ControladorCompras{
 		if (!is_dir($directorio) && !mkdir($directorio, 0775, true)) {
 			return array("status" => "error", "message" => "No se pudo preparar el almacenamiento de facturas.");
 		}
+		@chmod($directorio, 0775);
+		if (!is_writable($directorio)) {
+			return array("status" => "error", "message" => "La carpeta de facturas no tiene permisos de escritura: ".$directorioRelativo.".");
+		}
 		$nombre = "compra_".(int)$idSolicitud."_".date("Ymd_His")."_".bin2hex(random_bytes(4)).".".$permitidos[$mime];
 		$rutaRelativa = $directorioRelativo."/".$nombre;
 		$rutaCompleta = $directorio."/".$nombre;
 		if (!move_uploaded_file($archivo["tmp_name"], $rutaCompleta)) {
-			return array("status" => "error", "message" => "No se pudo guardar la factura.");
+			//return array("status" => "error", "message" => "No se pudo guardar la factura.");
+			$detalle = is_uploaded_file($archivo["tmp_name"]) ? "El archivo temporal existe, pero el servidor no pudo moverlo." : "El archivo temporal ya no esta disponible.";
+			return array("status" => "error", "message" => "No se pudo guardar la factura. ".$detalle);
 		}
-
+		@chmod($rutaCompleta, 0664);
+		
 		$detalles = array();
 		foreach ($costos as $idProducto => $costo) {
 			$detalles[] = array("id_producto" => (int)$idProducto, "costo_unitario" => (float)$costo);
