@@ -78,10 +78,6 @@ define ('PDF_HEADER_LOGO_WIDTH', 20);
 
 /**
  * Cache directory for temporary files (full path).
- */
-//define ('K_PATH_CACHE', sys_get_temp_dir().'/');
-/**
- * Cache directory for temporary files (full path).
  *
  * En hosting Linux algunos proveedores bloquean sys_get_temp_dir() para scripts
  * públicos. Usamos primero una carpeta propia de TCPDF y caemos al temporal del
@@ -92,7 +88,6 @@ if (!is_dir($tcpdfLocalCache)) {
 	@mkdir($tcpdfLocalCache, 0775, true);
 }
 define('K_PATH_CACHE', (is_dir($tcpdfLocalCache) && is_writable($tcpdfLocalCache)) ? $tcpdfLocalCache : rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR);
-
 
 /**
  * Generic name for a blank image.

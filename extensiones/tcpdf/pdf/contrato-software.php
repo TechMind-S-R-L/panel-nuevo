@@ -1,86 +1,6 @@
 <?php
 ob_start();
 
-if (isset($_GET["debugpdf"]) && hash_equals("techmind-pdf-2026", (string)$_GET["debugpdf"])) {
-	ini_set("display_errors", "1");
-	ini_set("display_startup_errors", "1");
-	error_reporting(E_ALL);
-	header("Content-Type: text/html; charset=utf-8");
-
-	$basePdf = __DIR__;
-	$baseTcpdf = dirname(__DIR__);
-	$tcpdfFile = $baseTcpdf . "/tcpdf.php";
-	$includeFile = $basePdf . "/tcpdf_include_notaventa.php";
-	$configFile = $basePdf . "/config/tcpdf_config_notaventa.php";
-	$logoFile = $basePdf . "/images/ICONO.png";
-	$cacheDir = $basePdf . "/cache";
-
-	function contratoDebugFila($nombre, $ok, $detalle) {
-		echo "<tr>";
-		echo "<td style='padding:8px;border-bottom:1px solid #e5edf7;font-weight:700'>" . htmlspecialchars($nombre, ENT_QUOTES, "UTF-8") . "</td>";
-		echo "<td style='padding:8px;border-bottom:1px solid #e5edf7;color:" . ($ok ? "#079455" : "#d92d20") . ";font-weight:800'>" . ($ok ? "OK" : "ERROR") . "</td>";
-		echo "<td style='padding:8px;border-bottom:1px solid #e5edf7'>" . htmlspecialchars((string)$detalle, ENT_QUOTES, "UTF-8") . "</td>";
-		echo "</tr>";
-	}
-
-	echo "<!doctype html><html><head><meta charset='utf-8'><title>Debug PDF Contrato</title></head>";
-	echo "<body style='font-family:Arial,sans-serif;background:#f5f8fc;color:#172033;padding:24px'>";
-	echo "<section style='max-width:980px;margin:auto;background:#fff;border:1px solid #d9e6f5;border-radius:18px;padding:24px;box-shadow:0 18px 45px rgba(15,54,110,.12)'>";
-	echo "<h1 style='margin:0 0 8px'>Diagnóstico PDF - contrato-software.php</h1>";
-	echo "<p style='color:#596b86;margin-top:0'>Si esta pantalla abre, el archivo existe y podemos ver el error real del servidor.</p>";
-
-	echo "<h2>Ambiente</h2><table style='width:100%;border-collapse:collapse;background:#fbfdff;border:1px solid #e5edf7'>";
-	contratoDebugFila("PHP", version_compare(PHP_VERSION, "7.3.0", ">="), PHP_VERSION);
-	foreach (array("mbstring", "gd", "iconv", "zlib", "curl", "json") as $ext) {
-		contratoDebugFila("Extensión ".$ext, extension_loaded($ext), extension_loaded($ext) ? "Cargada" : "No cargada");
-	}
-	contratoDebugFila("Temp PHP escribible", is_writable(sys_get_temp_dir()), sys_get_temp_dir());
-	echo "</table>";
-
-	echo "<h2>Rutas</h2><table style='width:100%;border-collapse:collapse;background:#fbfdff;border:1px solid #e5edf7'>";
-	contratoDebugFila("tcpdf.php", is_file($tcpdfFile), $tcpdfFile);
-	contratoDebugFila("include", is_file($includeFile), $includeFile);
-	contratoDebugFila("config", is_file($configFile), $configFile);
-	contratoDebugFila("ICONO.png", is_file($logoFile), $logoFile);
-	if (!is_dir($cacheDir)) { @mkdir($cacheDir, 0775, true); }
-	contratoDebugFila("cache", is_dir($cacheDir) && is_writable($cacheDir), $cacheDir);
-	echo "</table>";
-
-	echo "<h2>Generación TCPDF</h2><pre style='white-space:pre-wrap;background:#0d2238;color:#dff6ff;border-radius:14px;padding:16px;line-height:1.5'>";
-	try {
-		chdir(__DIR__);
-		require_once $includeFile;
-		echo "Include cargado correctamente.\n";
-		echo "TCPDF disponible: " . (class_exists("TCPDF") ? "sí" : "no") . "\n";
-		$versionFile = dirname(__DIR__) . "/VERSION";
-		echo "TCPDF versión: " . (is_file($versionFile) ? trim((string)file_get_contents($versionFile)) : "no detectada") . "\n";
-		echo "K_PATH_CACHE: " . (defined("K_PATH_CACHE") ? K_PATH_CACHE : "no definido") . "\n";
-
-		$pdfDebug = new TCPDF("P", "mm", array(210, 290), true, "UTF-8", false);
-		$pdfDebug->setPrintHeader(false);
-		$pdfDebug->setPrintFooter(false);
-		$pdfDebug->AddPage();
-		$pdfDebug->SetFont("helvetica", "B", 16);
-		$pdfDebug->Cell(0, 10, "Diagnostico PDF TechMind OK", 0, 1, "L");
-		if (is_file($logoFile)) {
-			$pdfDebug->Image($logoFile, 15, 30, 22, 22);
-		}
-		$pdfBytes = $pdfDebug->Output("", "S");
-		echo "PDF generado correctamente. Tamaño: " . strlen($pdfBytes) . " bytes.\n\n";
-		echo "RESULTADO FINAL: PDF OK";
-	} catch (Throwable $e) {
-		echo "ERROR REAL DEL SERVIDOR:\n";
-		echo $e->getMessage() . "\n\n";
-		echo "Archivo: " . $e->getFile() . "\n";
-		echo "Línea: " . $e->getLine() . "\n\n";
-		echo $e->getTraceAsString();
-	}
-	echo "</pre>";
-	echo "<p style='color:#d92d20;font-weight:700'>Cuando terminemos, quita este debug o deja de usar la clave.</p>";
-	echo "</section></body></html>";
-	exit;
-}
-
 require_once __DIR__ . "/../../../controladores/servicios.controlador.php";
 require_once __DIR__ . "/../../../modelos/servicios.modelo.php";
 require_once __DIR__ . "/../../../controladores/proyectos.controlador.php";
@@ -210,7 +130,5 @@ $html = '
 $pdf->writeHTML($html, true, false, true, false, '');
 if(ob_get_length()){ ob_end_clean(); }
 $pdf->Output('contrato-software-'.$proyecto["codigo"].'.pdf', 'I');
-
-
 
 
