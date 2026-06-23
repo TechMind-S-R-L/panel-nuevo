@@ -74,7 +74,7 @@
 /**
  * Header logo image width in user units.
  */
-define ('PDF_HEADER_LOGO_WIDTH', 20);
+//define ('PDF_HEADER_LOGO_WIDTH', 0);
 
 /**
  * Cache directory for temporary files (full path).
@@ -89,7 +89,7 @@ define ('K_BLANK_IMAGE', '_blank.png');
 /**
  * Page format.
  */
-define ('PDF_PAGE_FORMAT', array(210,290)); // Establece el tamaño de papel personalizado
+define ('PDF_PAGE_FORMAT', 'A4');
 
 /**
  * Page orientation (P=portrait, L=landscape).
@@ -134,22 +134,22 @@ define ('PDF_MARGIN_FOOTER', 10);
 /**
  * Top margin.
  */
-define ('PDF_MARGIN_TOP', 5);
+define ('PDF_MARGIN_TOP', 27);
 
 /**
  * Bottom margin.
  */
-define ('PDF_MARGIN_BOTTOM', 10);
+define ('PDF_MARGIN_BOTTOM', 25);
 
 /**
  * Left margin.
  */
-define ('PDF_MARGIN_LEFT', 5);
+define ('PDF_MARGIN_LEFT', 15);
 
 /**
  * Right margin.
  */
-define ('PDF_MARGIN_RIGHT', 5);
+define ('PDF_MARGIN_RIGHT', 15);
 
 /**
  * Default main font name.
@@ -159,7 +159,7 @@ define ('PDF_FONT_NAME_MAIN', 'helvetica');
 /**
  * Default main font size.
  */
-define ('PDF_FONT_SIZE_MAIN', 8);
+define ('PDF_FONT_SIZE_MAIN', 10);
 
 /**
  * Default data font name.
@@ -169,7 +169,7 @@ define ('PDF_FONT_NAME_DATA', 'helvetica');
 /**
  * Default data font size.
  */
-define ('PDF_FONT_SIZE_DATA', 6);
+define ('PDF_FONT_SIZE_DATA', 8);
 
 /**
  * Default monospaced font name.
@@ -211,6 +211,14 @@ define('K_THAI_TOPCHARS', true);
  * IMPORTANT: For security reason, disable this feature if you are printing user HTML content.
  */
 define('K_TCPDF_CALLS_IN_HTML', false);
+
+/**
+ * List of TCPDF methods that are allowed to be called using HTML syntax.
+ * Note: each method name must end with surrounded with | (pipe) character.
+ * The constant K_TCPDF_CALLS_IN_HTML must be set to true.
+ * IMPORTANT: For security reason, disable this feature if you are allowing user HTML content.
+ */
+define('K_ALLOWED_TCPDF_TAGS', '');
 
 /**
  * If true and PHP version is greater than 5, then the Error() method throw new exception instead of terminating the execution.
