@@ -3,15 +3,16 @@
   if (!$ || !document.body.classList.contains("tm-admin-page")) return;
 
   var firmaAnterior = null;
+  var eventosAnteriores = null;
   var primeraConsulta = true;
   var consultando = false;
-  var intervalo = 12000;
+  var intervalo = 7000;
   var toast = null;
 
   function enlaceRuta(ruta){
     return $(".sidebar-menu a").filter(function(){
       var href = ($(this).attr("href") || "").replace(/^\.?\//, "").split("?")[0];
-      return href === ruta || href === "index.php" && ($(this).attr("href") || "").indexOf("ruta="+ruta) !== -1;
+      return href === ruta || (href === "index.php" && ($(this).attr("href") || "").indexOf("ruta="+ruta) !== -1);
     });
   }
 
@@ -55,7 +56,7 @@
     });
   }
 
-  function mostrarAviso(){
+  function mostrarAviso(titulo, detalle, ruta){
     if (toast) {
       clearTimeout(toast._timer);
       toast.remove();
@@ -63,10 +64,11 @@
     toast = document.createElement("button");
     toast.type = "button";
     toast.className = "tm-live-toast";
-    toast.innerHTML = '<i class="fa fa-bell"></i><span><strong>Hay actividad nueva</strong><small>Los contadores del menú se actualizaron automáticamente.</small></span><b>Ver</b>';
+    toast.innerHTML = '<i class="fa fa-bell"></i><span><strong>'+(titulo || "Hay actividad nueva")+'</strong><small>'+(detalle || "Los contadores del menu se actualizaron automaticamente.")+'</small></span><b>Ver</b>';
     toast.addEventListener("click", function(){
       toast.remove();
       toast = null;
+      if (ruta) window.location.href = ruta;
     });
     document.body.appendChild(toast);
     requestAnimationFrame(function(){ toast.classList.add("show"); });
@@ -90,6 +92,26 @@
     });
   }
 
+  function revisarEventos(res){
+    var eventos = res.eventos || {};
+    var avisoMostrado = false;
+    if (!eventosAnteriores) {
+      eventosAnteriores = eventos;
+      return false;
+    }
+    if ((parseInt(eventos.ultima_cotizacion_web, 10) || 0) > (parseInt(eventosAnteriores.ultima_cotizacion_web, 10) || 0)) {
+      mostrarAviso("Nueva solicitud web", "Un cliente envio una nueva cotizacion desde la pagina.", "solicitudes-web");
+      avisoMostrado = true;
+    }
+    if ((parseInt(eventos.ultimo_mensaje_cliente, 10) || 0) > (parseInt(eventosAnteriores.ultimo_mensaje_cliente, 10) || 0)) {
+      mostrarAviso("Nuevo mensaje de cliente", "Hay una consulta nueva esperando respuesta.", "consultas-web");
+      avisoMostrado = true;
+      $(document).trigger("techmind:consulta-web-nueva", [res]);
+    }
+    eventosAnteriores = eventos;
+    return avisoMostrado;
+  }
+
   function consultar(){
     if (consultando || document.hidden) return;
     consultando = true;
@@ -107,9 +129,14 @@
       });
       actualizarBadgesPadre();
       if (!primeraConsulta && firmaAnterior && res.firma !== firmaAnterior) {
-        mostrarAviso();
+        if (!revisarEventos(res)) {
+          mostrarAviso();
+        }
         refrescarTablasAjax();
         $(document).trigger("techmind:datos-actualizados", [res]);
+      }
+      if (primeraConsulta) {
+        eventosAnteriores = res.eventos || {};
       }
       firmaAnterior = res.firma;
       primeraConsulta = false;
@@ -128,5 +155,5 @@
   setInterval(consultar, intervalo);
   document.addEventListener("visibilitychange", function(){ if (!document.hidden) consultar(); });
   window.addEventListener("focus", consultar);
-  setTimeout(consultar, 1500);
+  setTimeout(consultar, 1200);
 })(window, document, window.jQuery);

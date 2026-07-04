@@ -54,7 +54,7 @@ function tmConsultaEsc($valor){ return htmlspecialchars((string)($valor??""),ENT
             <div class="tm-admin-message <?php echo $mensaje["emisor"]==="cliente"?"cliente":"usuario"; ?>"><div><?php echo nl2br(tmConsultaEsc($mensaje["mensaje"])); ?></div><small><?php echo $mensaje["emisor"]==="cliente"?tmConsultaEsc($consultaSeleccionada["cliente"]):tmConsultaEsc($mensaje["usuario_nombre"] ?: "TechMind"); ?> · <?php echo date("d/m/Y H:i",strtotime($mensaje["fecha"])); ?></small></div>
           <?php endforeach; ?>
         </div>
-        <form method="post" class="tm-consulta-compose">
+        <form method="post" class="tm-consulta-compose" id="formConsultaWebAdmin">
           <input type="hidden" name="responderConsultaWeb" value="1"><input type="hidden" name="idConsultaWeb" value="<?php echo $idConsultaSeleccionada; ?>">
           <textarea class="form-control" name="mensajeConsultaWeb" rows="3" maxlength="3000" placeholder="Escribe la respuesta para el cliente..." required></textarea>
           <button class="btn btn-primary" type="submit"><i class="fa fa-send"></i> Enviar respuesta</button>
@@ -66,4 +66,99 @@ function tmConsultaEsc($valor){ return htmlspecialchars((string)($valor??""),ENT
   </div>
 </section>
 </div>
-<script>var tmChat=document.getElementById("tmConsultaMensajes");if(tmChat){tmChat.scrollTop=tmChat.scrollHeight;}</script>
+<script>
+(function(){
+  var idConsulta = <?php echo (int)$idConsultaSeleccionada; ?>;
+  var firmaChat = null;
+  var consultando = false;
+  var chat = document.getElementById("tmConsultaMensajes");
+  var form = document.getElementById("formConsultaWebAdmin");
+  var lista = document.querySelector(".tm-consulta-list");
+
+  function esc(valor){
+    var div = document.createElement("div");
+    div.textContent = valor == null ? "" : String(valor);
+    return div.innerHTML;
+  }
+
+  function pintarMensajes(mensajes){
+    if(!chat) return;
+    var estabaAbajo = chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 80;
+    if(!mensajes || !mensajes.length){
+      chat.innerHTML = '<div class="text-center text-muted" style="padding:35px 15px">Sin mensajes.</div>';
+      return;
+    }
+    chat.innerHTML = mensajes.map(function(m){
+      var clase = m.emisor === "cliente" ? "cliente" : "usuario";
+      return '<div class="tm-admin-message '+clase+'"><div>'+esc(m.mensaje).replace(/\n/g,"<br>")+'</div><small>'+esc(m.autor)+' · '+esc(m.fecha)+'</small></div>';
+    }).join("");
+    if(estabaAbajo){ chat.scrollTop = chat.scrollHeight; }
+  }
+
+  function pintarBandeja(items){
+    if(!lista || !items) return;
+    if(!items.length){
+      lista.innerHTML = '<div class="text-center text-muted" style="padding:35px 15px"><i class="fa fa-inbox fa-3x"></i><p>Aun no existen consultas.</p></div>';
+      return;
+    }
+    lista.innerHTML = items.map(function(c){
+      var active = parseInt(c.id,10) === parseInt(idConsulta,10) ? " active" : "";
+      var badge = parseInt(c.no_leidos,10) > 0 ? '<b class="tm-consulta-badge">'+esc(c.no_leidos)+'</b>' : "";
+      var inicial = (c.cliente || "?").charAt(0).toUpperCase();
+      return '<a class="tm-consulta-item'+active+'" href="consultas-web?idConsulta='+encodeURIComponent(c.id)+'">' +
+        '<span class="tm-consulta-avatar">'+esc(inicial)+'</span>' +
+        '<span><strong>'+esc(c.cliente)+'</strong><small>'+esc(c.asunto)+'</small><em>'+esc(c.ultimo_mensaje)+'</em></span>' +
+        '<span>'+badge+'<small class="tm-consulta-state">'+esc(String(c.estado || "").replace(/_/g," "))+'</small></span></a>';
+    }).join("");
+  }
+
+  function consultar(){
+    if(!idConsulta || consultando || document.hidden) return;
+    consultando = true;
+    $.ajax({
+      url:"ajax/consultas-web-tiempo-real.ajax.php",
+      method:"GET",
+      dataType:"json",
+      cache:false,
+      data:{accion:"estado",id_consulta:idConsulta}
+    }).done(function(res){
+      if(!res || !res.ok) return;
+      if(res.firma !== firmaChat){
+        pintarMensajes(res.mensajes || []);
+        pintarBandeja(res.bandeja || []);
+        firmaChat = res.firma;
+      }
+    }).always(function(){ consultando = false; });
+  }
+
+  if(form){
+    form.addEventListener("submit", function(e){
+      e.preventDefault();
+      var textarea = form.querySelector("[name='mensajeConsultaWeb']");
+      var mensaje = textarea ? textarea.value.trim() : "";
+      if(!mensaje) return;
+      var boton = form.querySelector("button[type='submit']");
+      if(boton) boton.disabled = true;
+      $.ajax({
+        url:"ajax/consultas-web-tiempo-real.ajax.php",
+        method:"POST",
+        dataType:"json",
+        data:{accion:"responder",id_consulta:idConsulta,mensaje:mensaje}
+      }).done(function(res){
+        if(res && res.ok){
+          if(textarea) textarea.value = "";
+          pintarMensajes(res.mensajes || []);
+          pintarBandeja(res.bandeja || []);
+          firmaChat = res.firma;
+        }
+      }).always(function(){ if(boton) boton.disabled = false; });
+    });
+  }
+
+  if(chat){ chat.scrollTop = chat.scrollHeight; }
+  setInterval(consultar, 4000);
+  document.addEventListener("visibilitychange", function(){ if(!document.hidden) consultar(); });
+  $(document).on("techmind:consulta-web-nueva techmind:datos-actualizados", consultar);
+  setTimeout(consultar, 800);
+})();
+</script>

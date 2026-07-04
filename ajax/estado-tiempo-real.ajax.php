@@ -39,6 +39,19 @@ function tmRtCount($db, $sql, $params = []) {
     }
 }
 
+function tmRtScalar($db, $sql, $params = []) {
+    try {
+        $stmt = $db->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
+        }
+        $stmt->execute();
+        return $stmt->fetchColumn();
+    } catch (Exception $e) {
+        return 0;
+    }
+}
+
 $badges = [];
 $badges["ventas"] = ($rol === "vendedor" && $perfil !== "Administrador")
     ? tmRtCount($db, "SELECT COUNT(*) FROM ventas WHERE id_vendedor=:id AND (estado_pago='pendiente' OR (estado_pago='aprobado' AND estado_despacho='pendiente'))", [":id" => $idUsuario])
@@ -68,14 +81,21 @@ $badges["recepcion-equipos-taller"] = tmRtCount($db, "SELECT COUNT(*) FROM servi
 $badges["repuestos-taller-almacen"] = tmRtCount($db, "SELECT COUNT(*) FROM servicio_taller_repuestos WHERE estado='solicitado'");
 $badges["productos-cajero"] = tmRtCount($db, "SELECT COUNT(*) FROM productos WHERE stock>0 AND (requiere_precio=1 OR precio_venta<=0)");
 
+$eventos = [
+    "ultima_cotizacion_web" => (int)tmRtScalar($db, "SELECT COALESCE(MAX(id),0) FROM cotizaciones WHERE origen='web'"),
+    "ultimo_mensaje_cliente" => (int)tmRtScalar($db, "SELECT COALESCE(MAX(id),0) FROM web_consulta_mensajes WHERE emisor='cliente'"),
+    "ultima_consulta_web" => (int)tmRtScalar($db, "SELECT COALESCE(MAX(id),0) FROM web_consultas")
+];
+
 $ultimaActividad = tmRtCount(
     $db,
     "SELECT COALESCE(MAX(id),0) FROM sistema_logs WHERE modulo NOT IN ('login','logs-sistema')"
 );
-$firma = hash("sha256", json_encode([$badges, $ultimaActividad]));
+$firma = hash("sha256", json_encode([$badges, $eventos, $ultimaActividad]));
 echo json_encode([
     "ok" => true,
     "badges" => $badges,
+    "eventos" => $eventos,
     "ultima_actividad" => $ultimaActividad,
     "firma" => $firma,
     "hora" => date("H:i:s")
