@@ -4,6 +4,8 @@ if($_SESSION["perfil"] != "Administrador" && $_SESSION["rol"] != "desarrollador"
   return;
 }
 
+ControladorProyectos::ctrEliminarDocumentoProyecto();
+
 $proyectos = ControladorProyectos::ctrMostrarProyectosUsuario();
 $proyectos = is_array($proyectos) ? $proyectos : array();
 $tmProyectoPuedeVerMontos = ($_SESSION["perfil"] ?? "") == "Administrador" || ($_SESSION["rol"] ?? "") == "vendedor";
@@ -1294,6 +1296,7 @@ $avancePromedio = count($proyectosVista) > 0 ? round($avanceAcumulado / count($p
 
 <script>
 var tmProyectoPuedeVerMontos = <?php echo $tmProyectoPuedeVerMontos ? "true" : "false"; ?>;
+var tmProyectoPuedeGestionarDocs = <?php echo (($_SESSION["perfil"] ?? "") == "Administrador" || ($_SESSION["rol"] ?? "") == "desarrollador") ? "true" : "false"; ?>;
 $(function(){ $('[title]').tooltip({container:'body'}); });
 
 function escapeHtmlProyecto(text){
@@ -1378,7 +1381,12 @@ function renderDocumentosProyecto(docs){
     html += '<div><div class="proyecto-doc-group-title">'+escapeHtmlProyecto(tipo)+'</div>';
     grupos[tipo].forEach(function(d){
       html += '<div class="proyecto-doc-card"><div><strong>'+escapeHtmlProyecto(d.titulo || "Documento")+'</strong><span>'+escapeHtmlProyecto(d.usuario || "Sin usuario")+'</span></div>';
+      html += '<div class="proyecto-doc-actions">';
       html += d.archivo ? '<a class="btn btn-default btn-sm" target="_blank" href="'+escapeHtmlProyecto(d.archivo)+'"><i class="fa fa-folder-open"></i> Abrir</a>' : '<span class="text-muted">Sin archivo</span>';
+      if(tmProyectoPuedeGestionarDocs && d.id){
+        html += ' <button type="button" class="btn btn-danger btn-sm btnEliminarDocumentoProyecto" data-id="'+escapeHtmlProyecto(d.id)+'"><i class="fa fa-trash"></i> Eliminar</button>';
+      }
+      html += '</div>';
       html += '</div>';
     });
     html += '</div>';
@@ -1407,6 +1415,9 @@ function renderEvidenciasProyecto(docs){
     html += '<div class="proyecto-evidence-preview">'+preview+'</div>';
     html += '<div class="proyecto-evidence-body"><strong>'+escapeHtmlProyecto(d.titulo || d.tipo_documento || "Evidencia")+'</strong>';
     html += archivo ? '<a target="_blank" href="'+escapeHtmlProyecto(archivo)+'"><i class="fa fa-external-link"></i> Abrir evidencia</a>' : '<span class="text-muted">Sin archivo</span>';
+    if(tmProyectoPuedeGestionarDocs && d.id){
+      html += '<button type="button" class="btn btn-danger btn-xs btnEliminarDocumentoProyecto" data-id="'+escapeHtmlProyecto(d.id)+'"><i class="fa fa-trash"></i> Eliminar evidencia</button>';
+    }
     html += '</div></div>';
   });
   html += '</div>';
@@ -1521,6 +1532,27 @@ $(document).on("click", ".btnDocumentoProyecto", function(e){
   $("#tipoDocumentoProyecto").val($(this).attr("tipoDocumento") || "Documento tecnico PDF");
   $("#modalVerProyectoSoftware").modal("hide");
   $("#modalDocumentoProyecto").modal("show");
+});
+
+$(document).on("click", ".btnEliminarDocumentoProyecto", function(e){
+  e.preventDefault();
+  e.stopPropagation();
+  var idDocumento = $(this).data("id");
+  if(!idDocumento){
+    return;
+  }
+  swal({
+    type: "warning",
+    title: "Eliminar documento?",
+    text: "Se quitara del proyecto. Si el archivo existe tambien se borrara del servidor.",
+    showCancelButton: true,
+    confirmButtonText: "Si, eliminar",
+    cancelButtonText: "Cancelar"
+  }).then(function(result){
+    if(result.value){
+      window.location = "index.php?ruta=proyectos&eliminarDocumentoProyecto=" + encodeURIComponent(idDocumento);
+    }
+  });
 });
 
 $(document).on("click", ".btnImprimirContratoSoftware", function(e){

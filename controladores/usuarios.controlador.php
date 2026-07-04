@@ -195,22 +195,40 @@ class ControladorUsuarios{
 
 	static public function ctrIngresoUsuario(){
 
-		if(isset($_POST["ingUsuario"])){
+		if(isset($_POST["ingUsuario"]) || isset($_POST["forzarSesionAqui"])){
 
-			if(preg_match('/^[a-zA-Z0-9._@+-]+$/', $_POST["ingUsuario"]) &&
+			$tabla = "usuarios";
+			ModeloUsuarios::mdlAsegurarColumnasSesion($tabla);
+			$respuesta = false;
+			$forzarSesionAqui = false;
+
+			if(isset($_POST["forzarSesionAqui"])){
+				$tokenForzar = (string)$_POST["forzarSesionAqui"];
+				$tokenSesionForzar = (string)($_SESSION["login_force_token"] ?? "");
+				$idUsuarioForzar = (int)($_SESSION["login_force_user_id"] ?? 0);
+				$expiraForzar = (int)($_SESSION["login_force_until"] ?? 0);
+
+				if($idUsuarioForzar > 0 && $expiraForzar >= time() && $tokenSesionForzar !== "" && hash_equals($tokenSesionForzar, $tokenForzar)){
+					$respuesta = ModeloUsuarios::mdlMostrarUsuarios($tabla, "id", $idUsuarioForzar);
+					$forzarSesionAqui = true;
+				}else{
+					echo '<br><div class="alert alert-danger">La autorizacion para cerrar la otra sesion expiro. Ingrese usuario y contrasena nuevamente.</div>';
+					unset($_SESSION["login_force_user_id"], $_SESSION["login_force_token"], $_SESSION["login_force_until"]);
+					return;
+				}
+			}else if(preg_match('/^[a-zA-Z0-9._@+-]+$/', $_POST["ingUsuario"]) &&
 			   preg_match('/^[a-zA-Z0-9]+$/', $_POST["ingPassword"])){
 
 			   	$encriptar = self::ctrHashPassword($_POST["ingPassword"]);
-
-				$tabla = "usuarios";
-				ModeloUsuarios::mdlAsegurarColumnasSesion($tabla);
-
 				$valor = trim($_POST["ingUsuario"]);
-
 				$respuesta = ModeloUsuarios::mdlMostrarUsuarioPorLogin($tabla, $valor);
 
-				if($respuesta && $respuesta["password"] == $encriptar){
+				if(!$respuesta || $respuesta["password"] != $encriptar){
+					$respuesta = false;
+				}
+			}
 
+				if($respuesta){
 					if($respuesta["estado"] == 1){
 
 						date_default_timezone_set('America/La_Paz');
@@ -218,11 +236,19 @@ class ControladorUsuarios{
 						$tokenSesionActual = $respuesta["session_token"] ?? "";
 						$sesionActiva = (int)($respuesta["sesion_activa"] ?? 0) === 1;
 
-						if($sesionActiva && !empty($tokenSesionActual) && self::ctrSesionVigente($respuesta["session_last_activity"] ?? null)){
+						if(!$forzarSesionAqui && $sesionActiva && !empty($tokenSesionActual) && self::ctrSesionVigente($respuesta["session_last_activity"] ?? null)){
 							$ipActiva = htmlspecialchars($respuesta["session_ip"] ?? "otra maquina", ENT_QUOTES, "UTF-8");
+							$tokenForzar = bin2hex(random_bytes(24));
+							$_SESSION["login_force_user_id"] = (int)$respuesta["id"];
+							$_SESSION["login_force_token"] = $tokenForzar;
+							$_SESSION["login_force_until"] = time() + 180;
 							echo '<br><div class="alert alert-warning">
-								Este usuario ya tiene una sesion activa. Cierre sesion en el otro equipo o espere 30 minutos de inactividad.
+								Este usuario ya tiene una sesion activa. Puede cerrar la otra sesion e ingresar en este equipo.
 								<br><b>IP registrada:</b> '.$ipActiva.'
+								<br><small>Esta autorizacion dura 3 minutos.</small>
+								<br><button type="submit" name="forzarSesionAqui" value="'.$tokenForzar.'" class="btn btn-warning btn-block" style="margin-top:10px">
+									<i class="fa fa-sign-in"></i> Loguearse aqui y cerrar la otra sesion
+								</button>
 							</div>';
 							if(class_exists("ControladorLogs")){
 								ControladorLogs::ctrRegistrarLog("login_bloqueado", "login", "Intento de ingreso bloqueado por sesion activa de ".$respuesta["usuario"]);
@@ -233,6 +259,7 @@ class ControladorUsuarios{
 						if($sesionActiva){
 							ModeloUsuarios::mdlLiberarSesion($tabla, (int)$respuesta["id"]);
 						}
+						unset($_SESSION["login_force_user_id"], $_SESSION["login_force_token"], $_SESSION["login_force_until"]);
 
 						$tokenSesion = bin2hex(random_bytes(32));
 						$ipSesion = self::ctrIpCliente();
@@ -298,8 +325,6 @@ class ControladorUsuarios{
 					echo '<br><div class="alert alert-danger">Error al ingresar, vuelve a intentarlo</div>';
 
 				}
-
-			}	
 
 		}
 
@@ -767,4 +792,3 @@ static public function ctrEditarUsuario() {
 
 }
 	
-

@@ -198,6 +198,27 @@ class ModeloProyectos{
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 	}
 
+	static public function mdlMostrarDocumento($idDocumento){
+		$conexion = Conexion::conectar();
+		self::mdlAsegurarVisibilidad($conexion);
+		$stmt = $conexion->prepare(
+			"SELECT d.*, p.id_desarrollador, p.codigo AS codigo_proyecto
+			 FROM proyecto_software_documentos d
+			 INNER JOIN proyectos_software p ON p.id = d.id_proyecto
+			 WHERE d.id = :id
+			 LIMIT 1"
+		);
+		$stmt->bindParam(":id", $idDocumento, PDO::PARAM_INT);
+		$stmt->execute();
+		return $stmt->fetch(PDO::FETCH_ASSOC);
+	}
+
+	static public function mdlEliminarDocumento($idDocumento){
+		$stmt = Conexion::conectar()->prepare("DELETE FROM proyecto_software_documentos WHERE id = :id");
+		$stmt->bindParam(":id", $idDocumento, PDO::PARAM_INT);
+		return $stmt->execute() ? "ok" : "error";
+	}
+
 	static public function mdlMostrarAvances($idProyecto){
 		$conexion = Conexion::conectar();
 		self::mdlAsegurarVisibilidad($conexion);

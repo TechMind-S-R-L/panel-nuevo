@@ -103,7 +103,12 @@ class ControladorProyectos{
 				"application/msword" => "doc",
 				"application/vnd.openxmlformats-officedocument.wordprocessingml.document" => "docx",
 				"application/vnd.ms-excel" => "xls",
-				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" => "xlsx"
+				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" => "xlsx",
+				"application/zip" => "zip",
+				"application/x-zip-compressed" => "zip",
+				"application/x-rar" => "rar",
+				"application/vnd.rar" => "rar",
+				"application/octet-stream" => "bin"
 			);
 			$finfo = new finfo(FILEINFO_MIME_TYPE);
 			$mime = $finfo->file($_FILES["archivoProyecto"]["tmp_name"]);
@@ -152,6 +157,38 @@ class ControladorProyectos{
 				ControladorLogs::ctrRegistrarLog("documento", "proyectos_software", "Documento agregado al proyecto ".$proyecto["codigo"]);
 			}
 			echo '<script>swal({type:"success",title:"Documento guardado",confirmButtonText:"Cerrar"}).then(function(result){if(result.value){window.location="proyectos";}});</script>';
+		}
+	}
+
+	static public function ctrEliminarDocumentoProyecto(){
+		if(!isset($_GET["eliminarDocumentoProyecto"])){
+			return;
+		}
+		if(($_SESSION["perfil"] ?? "") != "Administrador" && ($_SESSION["rol"] ?? "") != "desarrollador"){
+			echo '<script>window.location = "proyectos";</script>';
+			return;
+		}
+		$idDocumento = (int)$_GET["eliminarDocumentoProyecto"];
+		$documento = ModeloProyectos::mdlMostrarDocumento($idDocumento);
+		if(!$documento || (($_SESSION["perfil"] ?? "") != "Administrador" && (int)$documento["id_desarrollador"] != (int)$_SESSION["id"])){
+			echo '<script>swal({type:"error",title:"Sin permiso",text:"No puede eliminar este documento.",confirmButtonText:"Cerrar"}).then(function(){window.location="proyectos";});</script>';
+			return;
+		}
+		$ruta = trim((string)($documento["archivo"] ?? ""));
+		if($ruta !== ""){
+			$rutaCompleta = dirname(__DIR__)."/".ltrim(str_replace("\\", "/", $ruta), "/");
+			if(is_file($rutaCompleta)){
+				@unlink($rutaCompleta);
+			}
+		}
+		$respuesta = ModeloProyectos::mdlEliminarDocumento($idDocumento);
+		if($respuesta == "ok"){
+			if(class_exists("ControladorLogs")){
+				ControladorLogs::ctrRegistrarLog("eliminar_documento", "proyectos_software", "Documento eliminado del proyecto ".$documento["codigo_proyecto"]);
+			}
+			echo '<script>swal({type:"success",title:"Documento eliminado",text:"Ya puede volver a subirlo.",confirmButtonText:"Cerrar"}).then(function(){window.location="proyectos";});</script>';
+		}else{
+			echo '<script>swal({type:"error",title:"No se pudo eliminar",text:"Intente nuevamente.",confirmButtonText:"Cerrar"}).then(function(){window.location="proyectos";});</script>';
 		}
 	}
 
