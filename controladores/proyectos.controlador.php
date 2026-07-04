@@ -91,13 +91,52 @@ class ControladorProyectos{
 		}
 		$ruta = "";
 		if(isset($_FILES["archivoProyecto"]) && $_FILES["archivoProyecto"]["error"] === UPLOAD_ERR_OK){
-			$directorio = "vistas/documentos/proyectos/".$proyecto["id"];
-			if(!is_dir($directorio)){
-				mkdir($directorio, 0755, true);
+			$permitidos = array(
+				"application/pdf" => "pdf",
+				"image/jpeg" => "jpg",
+				"image/png" => "png",
+				"image/webp" => "webp",
+				"image/gif" => "gif",
+				"video/mp4" => "mp4",
+				"video/webm" => "webm",
+				"video/quicktime" => "mov",
+				"application/msword" => "doc",
+				"application/vnd.openxmlformats-officedocument.wordprocessingml.document" => "docx",
+				"application/vnd.ms-excel" => "xls",
+				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" => "xlsx"
+			);
+			$finfo = new finfo(FILEINFO_MIME_TYPE);
+			$mime = $finfo->file($_FILES["archivoProyecto"]["tmp_name"]);
+			if(!isset($permitidos[$mime]) || (int)$_FILES["archivoProyecto"]["size"] > 25 * 1024 * 1024){
+				echo '<script>swal({type:"error",title:"Archivo no valido",text:"Use PDF, imagen, video o documento de hasta 25 MB.",confirmButtonText:"Cerrar"});</script>';
+				return;
 			}
-			$nombreSeguro = preg_replace('/[^a-zA-Z0-9._-]/', '_', basename($_FILES["archivoProyecto"]["name"]));
-			$ruta = $directorio."/".date("YmdHis")."_".$nombreSeguro;
-			move_uploaded_file($_FILES["archivoProyecto"]["tmp_name"], $ruta);
+
+			$directorioRelativo = "vistas/documentos/proyectos/".$proyecto["id"];
+			$directorio = dirname(__DIR__)."/".$directorioRelativo;
+			if(!is_dir($directorio) && !mkdir($directorio, 0775, true)){
+				echo '<script>swal({type:"error",title:"No se pudo guardar el documento",text:"No fue posible preparar la carpeta del proyecto.",confirmButtonText:"Cerrar"});</script>';
+				return;
+			}
+			@chmod($directorio, 0775);
+			if(!is_writable($directorio)){
+				echo '<script>swal({type:"error",title:"No se pudo guardar el documento",text:"La carpeta de documentos del proyecto no tiene permisos de escritura.",confirmButtonText:"Cerrar"});</script>';
+				return;
+			}
+			$nombreBase = pathinfo($_FILES["archivoProyecto"]["name"], PATHINFO_FILENAME);
+			$nombreSeguro = preg_replace('/[^a-zA-Z0-9._-]/', '_', $nombreBase);
+			$nombreSeguro = trim($nombreSeguro, "._-");
+			if($nombreSeguro === ""){
+				$nombreSeguro = "documento";
+			}
+			$nombreArchivo = date("YmdHis")."_".$nombreSeguro.".".$permitidos[$mime];
+			$ruta = $directorioRelativo."/".$nombreArchivo;
+			$rutaCompleta = $directorio."/".$nombreArchivo;
+			if(!move_uploaded_file($_FILES["archivoProyecto"]["tmp_name"], $rutaCompleta)){
+				echo '<script>swal({type:"error",title:"No se pudo guardar el documento",text:"El servidor no pudo mover el archivo cargado. Revise permisos de la carpeta del proyecto.",confirmButtonText:"Cerrar"});</script>';
+				return;
+			}
+			@chmod($rutaCompleta, 0664);
 		}
 		$respuesta = ModeloProyectos::mdlGuardarDocumento(array(
 			"id_proyecto" => (int)$proyecto["id"],
