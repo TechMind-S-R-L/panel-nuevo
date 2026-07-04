@@ -245,4 +245,24 @@ class ControladorCotizacion{
 
 	}
 
+	static public function ctrEliminarSolicitudWeb(){
+		if(!isset($_GET["eliminarSolicitudWeb"])){
+			return;
+		}
+		if(($_SESSION["perfil"] ?? "") !== "Administrador"){
+			echo '<script>swal({type:"error",title:"Sin permiso",text:"Solo el administrador puede eliminar solicitudes web.",confirmButtonText:"Cerrar"}).then(function(){window.location="solicitudes-web";});</script>';
+			return;
+		}
+		$idSolicitud = (int)$_GET["eliminarSolicitudWeb"];
+		$respuesta = ModeloCotizacion::mdlEliminarSolicitudWeb($idSolicitud);
+		if($respuesta == "ok"){
+			if(class_exists("ControladorLogs")){
+				ControladorLogs::ctrRegistrarLog("eliminar", "solicitudes_web", "Solicitud web/cotizacion ".$idSolicitud." eliminada por administrador");
+			}
+			echo '<script>swal({type:"success",title:"Solicitud web eliminada",confirmButtonText:"Cerrar"}).then(function(){window.location="solicitudes-web";});</script>';
+		}else{
+			echo '<script>swal({type:"error",title:"No se pudo eliminar",confirmButtonText:"Cerrar"}).then(function(){window.location="solicitudes-web";});</script>';
+		}
+	}
+
 }

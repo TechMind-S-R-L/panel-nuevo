@@ -218,4 +218,35 @@ class ControladorProyectos{
 			echo '<script>swal({type:"error",title:"Primero debe estar pagado el saldo final",confirmButtonText:"Cerrar"});</script>';
 		}
 	}
+
+	static public function ctrEliminarProyectoSoftware(){
+		if(!isset($_GET["eliminarProyectoSoftware"])){
+			return;
+		}
+		if(($_SESSION["perfil"] ?? "") !== "Administrador"){
+			echo '<script>swal({type:"error",title:"Sin permiso",text:"Solo el administrador puede eliminar proyectos.",confirmButtonText:"Cerrar"}).then(function(){window.location="proyectos";});</script>';
+			return;
+		}
+		$idProyecto = (int)$_GET["eliminarProyectoSoftware"];
+		$documentos = ModeloProyectos::mdlMostrarDocumentos($idProyecto);
+		$respuesta = ModeloProyectos::mdlEliminarProyectoSoftware($idProyecto);
+
+		if(is_array($respuesta) && ($respuesta["status"] ?? "") === "ok"){
+			foreach($documentos as $documento){
+				$ruta = trim((string)($documento["archivo"] ?? ""));
+				if($ruta !== ""){
+					$rutaCompleta = dirname(__DIR__)."/".ltrim(str_replace("\\", "/", $ruta), "/");
+					if(is_file($rutaCompleta)){
+						@unlink($rutaCompleta);
+					}
+				}
+			}
+			if(class_exists("ControladorLogs")){
+				ControladorLogs::ctrRegistrarLog("eliminar", "proyectos_software", "Proyecto ".$respuesta["proyecto"]["codigo"]." eliminado por administrador");
+			}
+			echo '<script>swal({type:"success",title:"Proyecto eliminado",confirmButtonText:"Cerrar"}).then(function(){window.location="proyectos";});</script>';
+		}else{
+			echo '<script>swal({type:"error",title:"No se pudo eliminar",text:"Verifique que el proyecto exista.",confirmButtonText:"Cerrar"}).then(function(){window.location="proyectos";});</script>';
+		}
+	}
 }

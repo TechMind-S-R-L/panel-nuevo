@@ -14,6 +14,16 @@ if($consultaSeleccionada){
   $mensajesSeleccionados = ModeloWebConsultas::mdlMensajesConsulta($idConsultaSeleccionada);
 }
 function tmConsultaEsc($valor){ return htmlspecialchars((string)($valor??""),ENT_QUOTES,"UTF-8"); }
+function tmConsultaInicial($nombre){
+  $nombre = trim(preg_replace('/\s+/', ' ', (string)($nombre ?? "")));
+  if($nombre === ""){
+    return "?";
+  }
+  if(function_exists("mb_substr")){
+    return mb_strtoupper(mb_substr($nombre, 0, 1, "UTF-8"), "UTF-8");
+  }
+  return strtoupper(substr($nombre, 0, 1));
+}
 ?>
 <div class="content-wrapper tm-consultas-admin">
 <style>
@@ -34,7 +44,7 @@ function tmConsultaEsc($valor){ return htmlspecialchars((string)($valor??""),ENT
         <?php if(!$consultasWeb): ?><div class="text-center text-muted" style="padding:35px 15px"><i class="fa fa-inbox fa-3x"></i><p>Aún no existen consultas.</p></div><?php endif; ?>
         <?php foreach($consultasWeb as $consulta): ?>
           <a class="tm-consulta-item <?php echo (int)$consulta["id"]===$idConsultaSeleccionada?"active":""; ?>" href="consultas-web?idConsulta=<?php echo (int)$consulta["id"]; ?>">
-            <span class="tm-consulta-avatar"><?php echo tmConsultaEsc(mb_strtoupper(mb_substr($consulta["cliente"],0,1))); ?></span>
+            <span class="tm-consulta-avatar"><?php echo tmConsultaEsc(tmConsultaInicial($consulta["cliente"] ?? "")); ?></span>
             <span><strong><?php echo tmConsultaEsc($consulta["cliente"]); ?></strong><small><?php echo tmConsultaEsc($consulta["asunto"]); ?></small><em><?php echo tmConsultaEsc($consulta["ultimo_mensaje"]); ?></em></span>
             <span><?php if((int)$consulta["no_leidos"]>0): ?><b class="tm-consulta-badge"><?php echo (int)$consulta["no_leidos"]; ?></b><?php endif; ?><small class="tm-consulta-state"><?php echo tmConsultaEsc(str_replace("_"," ",$consulta["estado"])); ?></small></span>
           </a>
@@ -44,9 +54,10 @@ function tmConsultaEsc($valor){ return htmlspecialchars((string)($valor??""),ENT
     <section class="tm-consulta-chat">
       <?php if($consultaSeleccionada): ?>
         <div class="tm-consulta-chat-head">
-          <div class="tm-consulta-client"><span class="tm-consulta-avatar"><?php echo tmConsultaEsc(mb_strtoupper(mb_substr($consultaSeleccionada["cliente"],0,1))); ?></span><span><strong><?php echo tmConsultaEsc($consultaSeleccionada["cliente"]); ?></strong><span><?php echo tmConsultaEsc($consultaSeleccionada["email"]); ?> · <?php echo tmConsultaEsc($consultaSeleccionada["telefono"]); ?><br>Asesor: <?php echo tmConsultaEsc($consultaSeleccionada["asesor"] ?: "Sin asignar"); ?></span></span></div>
+          <div class="tm-consulta-client"><span class="tm-consulta-avatar"><?php echo tmConsultaEsc(tmConsultaInicial($consultaSeleccionada["cliente"] ?? "")); ?></span><span><strong><?php echo tmConsultaEsc($consultaSeleccionada["cliente"]); ?></strong><span><?php echo tmConsultaEsc($consultaSeleccionada["email"]); ?> · <?php echo tmConsultaEsc($consultaSeleccionada["telefono"]); ?><br>Asesor: <?php echo tmConsultaEsc($consultaSeleccionada["asesor"] ?: "Sin asignar"); ?></span></span></div>
           <div class="tm-consulta-actions">
             <?php if($consultaSeleccionada["estado"]!=="cerrada"): ?><a class="btn btn-default" href="index.php?ruta=consultas-web&idConsultaWeb=<?php echo $idConsultaSeleccionada; ?>&estadoConsultaWeb=cerrada"><i class="fa fa-check"></i> Cerrar consulta</a><?php else: ?><a class="btn btn-info" href="index.php?ruta=consultas-web&idConsultaWeb=<?php echo $idConsultaSeleccionada; ?>&estadoConsultaWeb=abierta"><i class="fa fa-refresh"></i> Reabrir</a><?php endif; ?>
+            <?php if(($_SESSION["perfil"] ?? "") === "Administrador"): ?><a class="btn btn-danger btnEliminarConsultaWeb" href="index.php?ruta=consultas-web&eliminarConsultaWeb=<?php echo $idConsultaSeleccionada; ?>"><i class="fa fa-trash"></i> Eliminar</a><?php endif; ?>
           </div>
         </div>
         <div class="tm-consulta-messages" id="tmConsultaMensajes">
@@ -104,7 +115,8 @@ function tmConsultaEsc($valor){ return htmlspecialchars((string)($valor??""),ENT
     lista.innerHTML = items.map(function(c){
       var active = parseInt(c.id,10) === parseInt(idConsulta,10) ? " active" : "";
       var badge = parseInt(c.no_leidos,10) > 0 ? '<b class="tm-consulta-badge">'+esc(c.no_leidos)+'</b>' : "";
-      var inicial = (c.cliente || "?").charAt(0).toUpperCase();
+      var nombreCliente = String(c.cliente || "").trim();
+      var inicial = nombreCliente ? Array.from(nombreCliente)[0].toUpperCase() : "?";
       return '<a class="tm-consulta-item'+active+'" href="consultas-web?idConsulta='+encodeURIComponent(c.id)+'">' +
         '<span class="tm-consulta-avatar">'+esc(inicial)+'</span>' +
         '<span><strong>'+esc(c.cliente)+'</strong><small>'+esc(c.asunto)+'</small><em>'+esc(c.ultimo_mensaje)+'</em></span>' +
@@ -156,6 +168,25 @@ function tmConsultaEsc($valor){ return htmlspecialchars((string)($valor??""),ENT
   }
 
   if(chat){ chat.scrollTop = chat.scrollHeight; }
+  $(document).on("click", ".btnEliminarConsultaWeb", function(e){
+    e.preventDefault();
+    var url = $(this).attr("href");
+    if(!url){
+      return;
+    }
+    swal({
+      type: "warning",
+      title: "Eliminar consulta web?",
+      text: "Se borrara la conversacion completa con todos sus mensajes.",
+      showCancelButton: true,
+      confirmButtonText: "Si, eliminar",
+      cancelButtonText: "Cancelar"
+    }).then(function(result){
+      if(result.value){
+        window.location = url;
+      }
+    });
+  });
   setInterval(consultar, 4000);
   document.addEventListener("visibilitychange", function(){ if(!document.hidden) consultar(); });
   $(document).on("techmind:consulta-web-nueva techmind:datos-actualizados", consultar);

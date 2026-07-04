@@ -1,5 +1,7 @@
 <?php
 
+ControladorCotizacion::ctrEliminarSolicitudWeb();
+
 $solicitudesWeb = ControladorCotizacion::ctrMostrarSolicitudesWeb(null);
 $solicitudesWeb = is_array($solicitudesWeb) ? $solicitudesWeb : array();
 
@@ -81,6 +83,12 @@ if(!function_exists("tmWebAcciones")){
     if($estado == "cotizada"){
       echo '<a class="btn btn-info" target="_blank" href="extensiones/tcpdf/pdf/cotizacion.php?idCotizacion='.$id.'&codigoCotizacion='.$codigoUrl.'" title="Imprimir cotizacion">
         <i class="fa fa-print"></i> Imprimir
+      </a>';
+    }
+
+    if(($_SESSION["perfil"] ?? "") == "Administrador"){
+      echo '<a class="btn btn-danger btnEliminarSolicitudWeb" href="index.php?ruta=solicitudes-web&eliminarSolicitudWeb='.$id.'" title="Eliminar solicitud web">
+        <i class="fa fa-trash"></i> Eliminar
       </a>';
     }
 
@@ -754,3 +762,25 @@ if(!function_exists("tmWebRenderCards")){
     </div>
   </section>
 </div>
+<script>
+$(document).on("click", ".btnEliminarSolicitudWeb", function(e){
+  e.preventDefault();
+  e.stopPropagation();
+  var url = $(this).attr("href");
+  if(!url){
+    return;
+  }
+  swal({
+    type: "warning",
+    title: "Eliminar solicitud web?",
+    text: "Se borrara la cotizacion/solicitud recibida desde la pagina web.",
+    showCancelButton: true,
+    confirmButtonText: "Si, eliminar",
+    cancelButtonText: "Cancelar"
+  }).then(function(result){
+    if(result.value){
+      window.location = url;
+    }
+  });
+});
+</script>

@@ -118,6 +118,12 @@ class ModeloCotizacion{
 		return $stmt->execute() ? "ok" : "error";
 	}
 
+	static public function mdlEliminarSolicitudWeb($idSolicitud){
+		$stmt = Conexion::conectar()->prepare("DELETE FROM cotizaciones WHERE id = :id AND origen = 'web'");
+		$stmt->bindValue(":id", (int)$idSolicitud, PDO::PARAM_INT);
+		return $stmt->execute() ? "ok" : "error";
+	}
+
 	static public function mdlEliminarCotizacion($tabla, $datos){
 
 		$stmt = Conexion::conectar()->prepare("DELETE FROM $tabla WHERE id = :id");

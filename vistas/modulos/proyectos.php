@@ -5,6 +5,7 @@ if($_SESSION["perfil"] != "Administrador" && $_SESSION["rol"] != "desarrollador"
 }
 
 ControladorProyectos::ctrEliminarDocumentoProyecto();
+ControladorProyectos::ctrEliminarProyectoSoftware();
 
 $proyectos = ControladorProyectos::ctrMostrarProyectosUsuario();
 $proyectos = is_array($proyectos) ? $proyectos : array();
@@ -83,6 +84,10 @@ function tmProyectoAcciones($proyecto){
 
   if($estado == "completado"){
     $acciones .= ' <button class="btn btn-info btnImprimirActaSoftware" title="Imprimir acta de entrega" idProyecto="'.$idProyecto.'"><i class="fa fa-print"></i> Acta</button>';
+  }
+
+  if(($_SESSION["perfil"] ?? "") == "Administrador"){
+    $acciones .= ' <a class="btn btn-danger btnEliminarProyectoSoftware" title="Eliminar proyecto completo" href="index.php?ruta=proyectos&eliminarProyectoSoftware='.$idProyecto.'"><i class="fa fa-trash"></i> Eliminar</a>';
   }
 
   return $acciones;
@@ -1551,6 +1556,27 @@ $(document).on("click", ".btnEliminarDocumentoProyecto", function(e){
   }).then(function(result){
     if(result.value){
       window.location = "index.php?ruta=proyectos&eliminarDocumentoProyecto=" + encodeURIComponent(idDocumento);
+    }
+  });
+});
+
+$(document).on("click", ".btnEliminarProyectoSoftware", function(e){
+  e.preventDefault();
+  e.stopPropagation();
+  var url = $(this).attr("href");
+  if(!url){
+    return;
+  }
+  swal({
+    type: "warning",
+    title: "Eliminar proyecto de software?",
+    text: "Se borraran avances, documentos y evidencias vinculadas a este proyecto.",
+    showCancelButton: true,
+    confirmButtonText: "Si, eliminar",
+    cancelButtonText: "Cancelar"
+  }).then(function(result){
+    if(result.value){
+      window.location = url;
     }
   });
 });

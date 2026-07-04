@@ -257,4 +257,40 @@ class ModeloProyectos{
 			return "error";
 		}
 	}
+
+	static public function mdlEliminarProyectoSoftware($idProyecto){
+		try{
+			$conexion = Conexion::conectar();
+			$conexion->beginTransaction();
+
+			$stmt = $conexion->prepare("SELECT id, codigo, id_servicio FROM proyectos_software WHERE id = :id LIMIT 1");
+			$stmt->bindValue(":id", (int)$idProyecto, PDO::PARAM_INT);
+			$stmt->execute();
+			$proyecto = $stmt->fetch(PDO::FETCH_ASSOC);
+			if(!$proyecto){
+				$conexion->rollBack();
+				return "no_existe";
+			}
+
+			$stmt = $conexion->prepare("DELETE FROM proyecto_software_documentos WHERE id_proyecto = :id");
+			$stmt->bindValue(":id", (int)$idProyecto, PDO::PARAM_INT);
+			$stmt->execute();
+
+			$stmt = $conexion->prepare("DELETE FROM proyecto_software_avances WHERE id_proyecto = :id");
+			$stmt->bindValue(":id", (int)$idProyecto, PDO::PARAM_INT);
+			$stmt->execute();
+
+			$stmt = $conexion->prepare("DELETE FROM proyectos_software WHERE id = :id");
+			$stmt->bindValue(":id", (int)$idProyecto, PDO::PARAM_INT);
+			$stmt->execute();
+
+			$conexion->commit();
+			return array("status" => "ok", "proyecto" => $proyecto);
+		}catch(Exception $e){
+			if(isset($conexion) && $conexion->inTransaction()){
+				$conexion->rollBack();
+			}
+			return "error";
+		}
+	}
 }

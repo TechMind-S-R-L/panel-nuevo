@@ -11,6 +11,23 @@ class ControladorWebConsultas{
 			echo '<script>window.location="inicio";</script>';
 			return;
 		}
+		if(isset($_GET["eliminarConsultaWeb"])){
+			if(($_SESSION["perfil"] ?? "") !== "Administrador"){
+				echo '<script>swal({type:"error",title:"Sin permiso",text:"Solo el administrador puede eliminar consultas web.",confirmButtonText:"Cerrar"}).then(function(){window.location="consultas-web";});</script>';
+				return;
+			}
+			$id = (int)$_GET["eliminarConsultaWeb"];
+			$respuesta = ModeloWebConsultas::mdlEliminarConsulta($id);
+			if($respuesta == "ok"){
+				if(class_exists("ControladorLogs")){
+					ControladorLogs::ctrRegistrarLog("eliminar", "consultas_web", "Consulta web ".$id." eliminada por administrador");
+				}
+				echo '<script>swal({type:"success",title:"Consulta web eliminada",confirmButtonText:"Cerrar"}).then(function(){window.location="consultas-web";});</script>';
+			}else{
+				echo '<script>swal({type:"error",title:"No se pudo eliminar",confirmButtonText:"Cerrar"}).then(function(){window.location="consultas-web";});</script>';
+			}
+			return;
+		}
 		if(isset($_POST["responderConsultaWeb"])){
 			$id = (int)($_POST["idConsultaWeb"] ?? 0);
 			$mensaje = trim((string)($_POST["mensajeConsultaWeb"] ?? ""));

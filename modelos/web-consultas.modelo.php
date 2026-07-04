@@ -202,4 +202,23 @@ class ModeloWebConsultas{
 		$stmt = Conexion::conectar()->prepare("UPDATE web_consultas SET estado=:estado,id_asignado=COALESCE(id_asignado,:id_usuario),fecha_cierre=IF(:estado_cierre='cerrada',NOW(),NULL) WHERE id=:id");
 		return $stmt->execute(array(":estado"=>$estado,":id_usuario"=>(int)$idUsuario,":estado_cierre"=>$estado,":id"=>(int)$idConsulta)) ? "ok" : "error";
 	}
+
+	static public function mdlEliminarConsulta($idConsulta){
+		self::mdlAsegurarTablas();
+		try{
+			$db = Conexion::conectar();
+			$db->beginTransaction();
+			$stmt = $db->prepare("DELETE FROM web_consulta_mensajes WHERE id_consulta=:id");
+			$stmt->execute(array(":id"=>(int)$idConsulta));
+			$stmt = $db->prepare("DELETE FROM web_consultas WHERE id=:id");
+			$stmt->execute(array(":id"=>(int)$idConsulta));
+			$db->commit();
+			return "ok";
+		}catch(Exception $e){
+			if(isset($db) && $db->inTransaction()){
+				$db->rollBack();
+			}
+			return "error";
+		}
+	}
 }
