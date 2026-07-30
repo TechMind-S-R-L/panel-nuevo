@@ -28,12 +28,35 @@ class ModeloClientes{
 		return true;
 	}
 
+	static private function mdlNormalizarFechaCliente($fecha){
+		$fecha = trim((string)$fecha);
+		if($fecha === ""){
+			return null;
+		}
+
+		$fecha = str_replace("/", "-", $fecha);
+		$partes = explode("-", $fecha);
+		if(count($partes) !== 3){
+			return null;
+		}
+
+		$anio = (int)$partes[0];
+		$mes = (int)$partes[1];
+		$dia = (int)$partes[2];
+		if(!checkdate($mes, $dia, $anio)){
+			return null;
+		}
+
+		return sprintf("%04d-%02d-%02d", $anio, $mes, $dia);
+	}
+
 	/*=============================================
 	CREAR CLIENTE
 	=============================================*/
 
 	static public function mdlIngresarCliente($tabla, $datos){
 		self::mdlAsegurarColumnasCliente($tabla);
+		$fechaNacimiento = self::mdlNormalizarFechaCliente($datos["fecha_nacimiento"] ?? null);
 
 		$stmt = Conexion::conectar()->prepare("INSERT INTO $tabla(nombre, documento, email, telefono, direccion, fecha_nacimiento) VALUES (:nombre, :documento, :email, :telefono, :direccion, :fecha_nacimiento)");
 
@@ -42,7 +65,7 @@ class ModeloClientes{
 		$stmt->bindParam(":email", $datos["email"], PDO::PARAM_STR);
 		$stmt->bindParam(":telefono", $datos["telefono"], PDO::PARAM_STR);
 		$stmt->bindParam(":direccion", $datos["direccion"], PDO::PARAM_STR);
-		$stmt->bindParam(":fecha_nacimiento", $datos["fecha_nacimiento"], PDO::PARAM_STR);
+		$stmt->bindValue(":fecha_nacimiento", $fechaNacimiento, $fechaNacimiento === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
 
 		if($stmt->execute()){
 
@@ -97,6 +120,7 @@ class ModeloClientes{
 
 	static public function mdlEditarCliente($tabla, $datos){
 		self::mdlAsegurarColumnasCliente($tabla);
+		$fechaNacimiento = self::mdlNormalizarFechaCliente($datos["fecha_nacimiento"] ?? null);
 
 		$stmt = Conexion::conectar()->prepare("UPDATE $tabla SET nombre = :nombre, documento = :documento, email = :email, telefono = :telefono, direccion = :direccion, fecha_nacimiento = :fecha_nacimiento WHERE id = :id");
 
@@ -106,7 +130,7 @@ class ModeloClientes{
 		$stmt->bindParam(":email", $datos["email"], PDO::PARAM_STR);
 		$stmt->bindParam(":telefono", $datos["telefono"], PDO::PARAM_STR);
 		$stmt->bindParam(":direccion", $datos["direccion"], PDO::PARAM_STR);
-		$stmt->bindParam(":fecha_nacimiento", $datos["fecha_nacimiento"], PDO::PARAM_STR);
+		$stmt->bindValue(":fecha_nacimiento", $fechaNacimiento, $fechaNacimiento === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
 
 		if($stmt->execute()){
 
