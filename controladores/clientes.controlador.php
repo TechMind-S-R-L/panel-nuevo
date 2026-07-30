@@ -58,17 +58,11 @@ class ControladorClientes{
 	static private function ctrDatosClienteValidos($datos){
 		$nombre = trim($datos["nombre"] ?? "");
 		$documento = trim($datos["documento"] ?? "");
-		$email = trim($datos["email"] ?? "");
-		$telefono = trim($datos["telefono"] ?? "");
-		$direccion = trim($datos["direccion"] ?? "");
 
-		$nombreValido = $nombre !== "" && preg_match('/^[\p{L}\p{N}\s\.\-]+$/u', $nombre);
-		$documentoValido = $documento !== "" && preg_match('/^[0-9]+$/', $documento);
-		$emailValido = $email === "" || filter_var($email, FILTER_VALIDATE_EMAIL);
-		$telefonoValido = $telefono === "" || preg_match('/^[()+\-0-9\s]+$/', $telefono);
-		$direccionValida = $direccion === "" || preg_match('/^[\p{L}\p{N}\s\#\.\,\-\/]+$/u', $direccion);
+		$nombreValido = $nombre !== "";
+		$documentoValido = $documento !== "";
 
-		return $nombreValido && $documentoValido && $emailValido && $telefonoValido && $direccionValida;
+		return $nombreValido && $documentoValido;
 	}
 
 	static private function ctrAlertaClienteInvalido(){
@@ -76,7 +70,7 @@ class ControladorClientes{
 			swal({
 				type: "error",
 				title: "Revise los datos del cliente",
-				text: "Nombre y documento son obligatorios. Email, telefono y direccion deben tener un formato valido.",
+				text: "Nombre y documento/NIT son obligatorios. Los demas datos pueden quedar vacios.",
 				showConfirmButton: true,
 				confirmButtonText: "Cerrar"
 			}).then(function(result){

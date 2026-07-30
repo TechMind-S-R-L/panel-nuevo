@@ -66,7 +66,7 @@ class ModeloClientes{
 		$stmt = Conexion::conectar()->prepare("INSERT INTO $tabla(".implode(", ", $columnas).") VALUES (".implode(", ", $valores).")");
 
 		$stmt->bindParam(":nombre", $datos["nombre"], PDO::PARAM_STR);
-		$stmt->bindParam(":documento", $datos["documento"], PDO::PARAM_INT);
+		$stmt->bindParam(":documento", $datos["documento"], PDO::PARAM_STR);
 		if(isset($columnasDisponibles["email"])){ $stmt->bindParam(":email", $datos["email"], PDO::PARAM_STR); }
 		if(isset($columnasDisponibles["telefono"])){ $stmt->bindParam(":telefono", $datos["telefono"], PDO::PARAM_STR); }
 		if(isset($columnasDisponibles["direccion"])){ $stmt->bindParam(":direccion", $datos["direccion"], PDO::PARAM_STR); }
@@ -138,7 +138,7 @@ class ModeloClientes{
 
 		$stmt->bindParam(":id", $datos["id"], PDO::PARAM_INT);
 		$stmt->bindParam(":nombre", $datos["nombre"], PDO::PARAM_STR);
-		$stmt->bindParam(":documento", $datos["documento"], PDO::PARAM_INT);
+		$stmt->bindParam(":documento", $datos["documento"], PDO::PARAM_STR);
 		if(isset($columnasDisponibles["email"])){ $stmt->bindParam(":email", $datos["email"], PDO::PARAM_STR); }
 		if(isset($columnasDisponibles["telefono"])){ $stmt->bindParam(":telefono", $datos["telefono"], PDO::PARAM_STR); }
 		if(isset($columnasDisponibles["direccion"])){ $stmt->bindParam(":direccion", $datos["direccion"], PDO::PARAM_STR); }
