@@ -1189,7 +1189,7 @@ $clientesVenta = ControladorClientes::ctrMostrarClientes(null, null);
 <div id="modalAgregarCliente" class="modal fade" role="dialog">
   <div class="modal-dialog">
     <div class="modal-content">
-      <form role="form" method="post">
+      <form role="form" method="post" novalidate>
         <input type="hidden" name="origenCliente" value="ventas">
 
         <div class="modal-header">
@@ -1219,7 +1219,7 @@ $clientesVenta = ControladorClientes::ctrMostrarClientes(null, null);
                   <label>Cedula de identidad / NIT</label>
                   <div class="input-group">
                     <span class="input-group-addon"><i class="fa fa-key"></i></span>
-                    <input type="number" min="0" class="form-control" name="nuevoDocumentoId" placeholder="Ej. 1234567" required>
+                    <input type="text" class="form-control" name="nuevoDocumentoId" placeholder="Ej. 1234567" required>
                   </div>
                 </div>
               </div>
@@ -1240,7 +1240,7 @@ $clientesVenta = ControladorClientes::ctrMostrarClientes(null, null);
                   <label>Email</label>
                   <div class="input-group">
                     <span class="input-group-addon"><i class="fa fa-envelope"></i></span>
-                    <input type="email" class="form-control" name="nuevoEmail" placeholder="correo@ejemplo.com">
+                    <input type="text" class="form-control" name="nuevoEmail" placeholder="correo@ejemplo.com">
                   </div>
                 </div>
               </div>
@@ -1258,7 +1258,7 @@ $clientesVenta = ControladorClientes::ctrMostrarClientes(null, null);
               <label>Fecha de nacimiento</label>
               <div class="input-group">
                 <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
-                <input type="text" class="form-control" name="nuevaFechaNacimiento" placeholder="aaaa/mm/dd" data-inputmask="'alias': 'yyyy/mm/dd'" data-mask>
+                <input type="text" class="form-control" name="nuevaFechaNacimiento" placeholder="aaaa-mm-dd">
               </div>
             </div>
           </div>

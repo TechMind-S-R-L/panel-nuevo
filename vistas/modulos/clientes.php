@@ -590,7 +590,7 @@ function tmClienteIniciales($nombre){
 <div id="modalPasswordWebCliente" class="modal fade cliente-modal" role="dialog">
   <div class="modal-dialog">
     <div class="modal-content">
-      <form role="form" method="post">
+      <form role="form" method="post" novalidate>
         <div class="modal-header">
           <button type="button" class="close" data-dismiss="modal">&times;</button>
           <h4 class="modal-title"><i class="fa fa-key"></i> Clave web del cliente</h4>
@@ -633,7 +633,7 @@ function tmClienteIniciales($nombre){
 <div id="modalAgregarCliente" class="modal fade cliente-modal" role="dialog">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
-      <form role="form" method="post">
+      <form role="form" method="post" novalidate>
         <div class="modal-header">
           <button type="button" class="close" data-dismiss="modal">&times;</button>
           <h4 class="modal-title"><i class="fa fa-user-plus"></i> Agregar cliente</h4>
@@ -649,13 +649,13 @@ function tmClienteIniciales($nombre){
             <div class="col-md-6">
               <div class="form-group">
                 <label>Cedula de identidad</label>
-                <input type="number" min="0" class="form-control" name="nuevoDocumentoId" placeholder="Documento del cliente" required>
+                <input type="text" class="form-control" name="nuevoDocumentoId" placeholder="Documento/NIT del cliente" required>
               </div>
             </div>
             <div class="col-md-6">
               <div class="form-group">
                 <label>Email</label>
-                <input type="email" class="form-control" name="nuevoEmail" placeholder="correo@dominio.com">
+                <input type="text" class="form-control" name="nuevoEmail" placeholder="correo@dominio.com">
               </div>
             </div>
             <div class="col-md-6">
@@ -673,7 +673,7 @@ function tmClienteIniciales($nombre){
             <div class="col-md-4">
               <div class="form-group">
                 <label>Fecha nacimiento</label>
-                <input type="text" class="form-control" name="nuevaFechaNacimiento" placeholder="yyyy/mm/dd" data-inputmask="'alias': 'yyyy/mm/dd'" data-mask>
+                <input type="text" class="form-control" name="nuevaFechaNacimiento" placeholder="yyyy-mm-dd">
                 <div class="cliente-help">Opcional.</div>
               </div>
             </div>

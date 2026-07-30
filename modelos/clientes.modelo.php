@@ -62,24 +62,38 @@ class ModeloClientes{
 				$valores[] = ":".$columnaOpcional;
 			}
 		}
+		if(isset($columnasDisponibles["compras"])){
+			$columnas[] = "compras";
+			$valores[] = "0";
+		}
+		if(isset($columnasDisponibles["ultima_compra"])){
+			$columnas[] = "ultima_compra";
+			$valores[] = "CURDATE()";
+		}
 
-		$stmt = Conexion::conectar()->prepare("INSERT INTO $tabla(".implode(", ", $columnas).") VALUES (".implode(", ", $valores).")");
+		try{
+			$stmt = Conexion::conectar()->prepare("INSERT INTO $tabla(".implode(", ", $columnas).") VALUES (".implode(", ", $valores).")");
 
-		$stmt->bindParam(":nombre", $datos["nombre"], PDO::PARAM_STR);
-		$stmt->bindParam(":documento", $datos["documento"], PDO::PARAM_STR);
-		if(isset($columnasDisponibles["email"])){ $stmt->bindParam(":email", $datos["email"], PDO::PARAM_STR); }
-		if(isset($columnasDisponibles["telefono"])){ $stmt->bindParam(":telefono", $datos["telefono"], PDO::PARAM_STR); }
-		if(isset($columnasDisponibles["direccion"])){ $stmt->bindParam(":direccion", $datos["direccion"], PDO::PARAM_STR); }
-		if(isset($columnasDisponibles["fecha_nacimiento"])){ $stmt->bindValue(":fecha_nacimiento", $fechaNacimiento, $fechaNacimiento === null ? PDO::PARAM_NULL : PDO::PARAM_STR); }
+			$stmt->bindParam(":nombre", $datos["nombre"], PDO::PARAM_STR);
+			$stmt->bindParam(":documento", $datos["documento"], PDO::PARAM_STR);
+			if(isset($columnasDisponibles["email"])){ $stmt->bindParam(":email", $datos["email"], PDO::PARAM_STR); }
+			if(isset($columnasDisponibles["telefono"])){ $stmt->bindParam(":telefono", $datos["telefono"], PDO::PARAM_STR); }
+			if(isset($columnasDisponibles["direccion"])){ $stmt->bindParam(":direccion", $datos["direccion"], PDO::PARAM_STR); }
+			if(isset($columnasDisponibles["fecha_nacimiento"])){ $stmt->bindValue(":fecha_nacimiento", $fechaNacimiento, $fechaNacimiento === null ? PDO::PARAM_NULL : PDO::PARAM_STR); }
 
-		if($stmt->execute()){
+			if($stmt->execute()){
 
-			return "ok";
+				return "ok";
 
-		}else{
+			}else{
 
+				return "error";
+
+			}
+		}catch(Exception $e){
+			error_log("TechMind clientes: no se pudo insertar cliente - ".$e->getMessage());
 			return "error";
-		
+
 		}
 
 		$stmt->close();
