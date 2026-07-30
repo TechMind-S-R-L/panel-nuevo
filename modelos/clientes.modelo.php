@@ -19,6 +19,8 @@ class ModeloClientes{
 				$stmt->execute(array(":columna" => $columna));
 				if(!$stmt->fetch()){
 					$conexion->exec("ALTER TABLE $tabla ADD $columna $definicion");
+				}else{
+					$conexion->exec("ALTER TABLE $tabla MODIFY $columna $definicion");
 				}
 			}catch(Exception $e){
 				return false;
