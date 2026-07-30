@@ -462,6 +462,25 @@ function tmDispatchEscape(text){
   return $("<div>").text(text || "").html();
 }
 
+function tmNormalizarCodigoDespacho(codigo){
+  codigo = String(codigo || "").trim();
+  codigo = codigo.replace(/\s+/g, "");
+  codigo = codigo.replace(/['`´’‘‛＇_–—−‐]+/g, "-");
+  codigo = codigo.replace(/-+/g, "-").toUpperCase();
+
+  var conSeparador = codigo.match(/^(TMU[A-Z0-9]+)-([0-9]{5})$/);
+  if(conSeparador){
+    return conSeparador[1] + "-" + conSeparador[2];
+  }
+
+  var pegado = codigo.match(/^(TMU[A-Z0-9]+)([0-9]{5})$/);
+  if(pegado){
+    return pegado[1] + "-" + pegado[2];
+  }
+
+  return codigo;
+}
+
 function tmAbrirModalEntrega(idVenta, codigoVenta, productos){
   $("#entregarVenta").val(idVenta);
   $("#codigoVentaEntrega").text(codigoVenta);
@@ -585,7 +604,8 @@ $("#formEntregarVenta").on("submit", function(e){
 
   $(".codigoEntrega").each(function(){
     var idProducto = $(this).attr("data-id-producto");
-    var codigo = ($(this).val() || "").trim();
+    var codigo = tmNormalizarCodigoDespacho($(this).val() || "");
+    $(this).val(codigo);
     var llave = codigo.toLowerCase();
 
     if(!codigos[idProducto]){
@@ -614,6 +634,10 @@ $("#formEntregarVenta").on("submit", function(e){
   }
 
   $("#codigosDespacho").val(JSON.stringify(codigos));
+});
+
+$(document).on("blur change", ".codigoEntrega", function(){
+  $(this).val(tmNormalizarCodigoDespacho($(this).val() || ""));
 });
 </script>
 

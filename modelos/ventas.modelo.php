@@ -4,6 +4,24 @@ require_once "conexion.php";
 
 class ModeloVentas{
 
+	private static function mdlNormalizarCodigoUnidadDespacho($codigo){
+		$codigo = trim((string)$codigo);
+		$codigo = str_replace(array("\xC2\xA0", " ", "\t", "\r", "\n"), "", $codigo);
+		$codigo = str_replace(array("'", "`", "´", "’", "‘", "‛", "＇", "_", "–", "—", "−", "‐"), "-", $codigo);
+		$codigo = preg_replace('/-+/', '-', $codigo);
+		$codigo = strtoupper($codigo);
+
+		if(preg_match('/^(TMU[A-Z0-9]+)-([0-9]{5})$/', $codigo, $partes)){
+			return $partes[1]."-".$partes[2];
+		}
+
+		if(preg_match('/^(TMU[A-Z0-9]+)([0-9]{5})$/', $codigo, $partes)){
+			return $partes[1]."-".$partes[2];
+		}
+
+		return $codigo;
+	}
+
 	/*=============================================
 	MOSTRAR VENTAS
 	=============================================*/
@@ -368,7 +386,9 @@ class ModeloVentas{
 					$codigos = [];
 				}
 
-				$codigos = array_values(array_filter(array_map("trim", $codigos), function($codigo){
+				$codigos = array_values(array_filter(array_map(function($codigo){
+					return self::mdlNormalizarCodigoUnidadDespacho($codigo);
+				}, $codigos), function($codigo){
 					return $codigo !== "";
 				}));
 
