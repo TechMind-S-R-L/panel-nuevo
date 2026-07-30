@@ -308,9 +308,22 @@ class ControladorProductos{
 				VALIDAR IMAGEN
 				=============================================*/
 	
-				$ruta = $_POST["imagenActual"];
+				$codigoImagenProducto = isset($_POST["editarNuevoCodigo"]) ? $_POST["editarNuevoCodigo"] : $_POST["editarCodigo"];
+				$ruta = self::ctrProcesarImagenProducto("editarImagen", $codigoImagenProducto, $_POST["imagenActual"]);
+				if($ruta === false){
+					echo '<script>
+						swal({
+							type: "error",
+							title: "Error al subir la imagen",
+							text: "La imagen debe ser JPG, JPEG o PNG y el servidor debe poder guardarla.",
+							showConfirmButton: true,
+							confirmButtonText: "Cerrar"
+						});
+					</script>';
+					return;
+				}
 	
-				if(isset($_FILES["editarImagen"]["tmp_name"]) && !empty($_FILES["editarImagen"]["tmp_name"])){
+				if(false && isset($_FILES["editarImagen"]["tmp_name"]) && !empty($_FILES["editarImagen"]["tmp_name"])){
 	
 					list($ancho, $alto) = getimagesize($_FILES["editarImagen"]["tmp_name"]);
 	
