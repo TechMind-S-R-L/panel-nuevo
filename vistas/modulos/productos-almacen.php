@@ -1004,6 +1004,7 @@ $marcasProducto = is_array($marcasProducto) ? $marcasProducto : array();
               <label>Codigo</label>
               <div class="input-group"><span class="input-group-addon"><i class="fa fa-code"></i></span><input type="text" class="form-control" id="editarCodigo" name="editarCodigo" required></div>
             </div>
+            <input type="hidden" id="editarIdProducto" name="editarIdProducto">
 
             <div class="tm-product-field">
               <label>Codigo general</label>

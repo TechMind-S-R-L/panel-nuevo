@@ -244,11 +244,18 @@ class ModeloProductos{
 		$datos["descripcion"] = self::mdlNormalizarNombreProducto($datos["descripcion"]);
 		$datos["detalle"] = trim((string)($datos["detalle"] ?? ""));
 
-		// $stmt = Conexion::conectar()->prepare("UPDATE $tabla SET id_categoria = :id_categoria, descripcion = :descripcion, imagen = :imagen, stock = :stock, precio_compra = :precio_compra, precio_venta = :precio_venta WHERE codigo = :codigo");
-		$stmt = Conexion::conectar()->prepare("UPDATE $tabla SET id_categoria = :id_categoria, id_marca = :id_marca, descripcion = :descripcion, detalle = :detalle, imagen = :imagen, stock = :stock, precio_compra = :precio_compra, precio_venta = :precio_venta, codigo_producto_generico = :codigo_producto_generico, codigo_barras_unico = :codigo_barras_unico WHERE codigo = :codigo");
+		$usarId = !empty($datos["id"]);
+		if($usarId){
+			$stmt = Conexion::conectar()->prepare("UPDATE $tabla SET id_categoria = :id_categoria, id_marca = :id_marca, codigo = :codigo, descripcion = :descripcion, detalle = :detalle, imagen = :imagen, stock = :stock, precio_compra = :precio_compra, precio_venta = :precio_venta, codigo_producto_generico = :codigo_producto_generico, codigo_barras_unico = :codigo_barras_unico WHERE id = :id");
+		}else{
+			$stmt = Conexion::conectar()->prepare("UPDATE $tabla SET id_categoria = :id_categoria, id_marca = :id_marca, descripcion = :descripcion, detalle = :detalle, imagen = :imagen, stock = :stock, precio_compra = :precio_compra, precio_venta = :precio_venta, codigo_producto_generico = :codigo_producto_generico, codigo_barras_unico = :codigo_barras_unico WHERE codigo = :codigo");
+		}
 
 		$stmt->bindParam(":id_categoria", $datos["id_categoria"], PDO::PARAM_INT);
 		$stmt->bindValue(":id_marca", !empty($datos["id_marca"]) ? (int)$datos["id_marca"] : null, !empty($datos["id_marca"]) ? PDO::PARAM_INT : PDO::PARAM_NULL);
+		if($usarId){
+			$stmt->bindValue(":id", (int)$datos["id"], PDO::PARAM_INT);
+		}
 		$stmt->bindParam(":codigo", $datos["codigo"], PDO::PARAM_STR);
 		$stmt->bindParam(":codigo_producto_generico", $datos["codigo_producto_generico"], PDO::PARAM_STR);
 		$stmt->bindParam(":codigo_barras_unico", $datos["codigo_barras_unico"], PDO::PARAM_STR);

@@ -232,6 +232,7 @@ $(document).on("click", "button.btnEditarProducto", function() {
       $("#editarCategoria").html(respuesta["ruta_categoria"] || respuesta["categoria"]);
      }
     })
+    $("#editarIdProducto").val(respuesta["id"] || idProducto);
     $("#editarCodigo").val(respuesta["codigo"]);
     $("#editarMarca").val(respuesta["id_marca"] || "0");
      $("#editarDescripcion").val(respuesta["descripcion"]);

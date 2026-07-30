@@ -5,8 +5,12 @@ class ControladorProductos{
 	static private function ctrProcesarImagenProducto($campoArchivo, $codigoProducto, $rutaActual = ""){
 		$rutaDefault = "vistas/img/productos/default/anonymous.png";
 
-		if(!isset($_FILES[$campoArchivo]) || empty($_FILES[$campoArchivo]["tmp_name"]) || !is_uploaded_file($_FILES[$campoArchivo]["tmp_name"])){
+		if(!isset($_FILES[$campoArchivo]) || ($_FILES[$campoArchivo]["error"] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE || empty($_FILES[$campoArchivo]["tmp_name"])){
 			return $rutaActual !== "" ? $rutaActual : $rutaDefault;
+		}
+
+		if(($_FILES[$campoArchivo]["error"] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK || !is_uploaded_file($_FILES[$campoArchivo]["tmp_name"])){
+			return false;
 		}
 
 		$infoImagen = @getimagesize($_FILES[$campoArchivo]["tmp_name"]);
@@ -21,40 +25,19 @@ class ControladorProductos{
 			return false;
 		}
 
-		$nuevoAncho = 500;
-		$nuevoAlto = 500;
 		$directorio = "vistas/img/productos/".$codigoProducto;
 		if(!is_dir($directorio) && !mkdir($directorio, 0755, true)){
 			return false;
 		}
 
-		$aleatorio = mt_rand(100,999);
+		$aleatorio = date("YmdHis")."-".mt_rand(100,999);
 		if($mimeImagen === "image/png"){
 			$ruta = $directorio."/".$aleatorio.".png";
-			$origen = @imagecreatefrompng($_FILES[$campoArchivo]["tmp_name"]);
 		}else{
 			$ruta = $directorio."/".$aleatorio.".jpg";
-			$origen = @imagecreatefromjpeg($_FILES[$campoArchivo]["tmp_name"]);
 		}
 
-		if(!$origen){
-			return false;
-		}
-
-		$destino = imagecreatetruecolor($nuevoAncho, $nuevoAlto);
-		if($mimeImagen === "image/png"){
-			imagealphablending($destino, false);
-			imagesavealpha($destino, true);
-			$transparente = imagecolorallocatealpha($destino, 255, 255, 255, 127);
-			imagefilledrectangle($destino, 0, 0, $nuevoAncho, $nuevoAlto, $transparente);
-		}
-
-		imagecopyresampled($destino, $origen, 0, 0, 0, 0, $nuevoAncho, $nuevoAlto, $ancho, $alto);
-		$guardado = $mimeImagen === "image/png" ? imagepng($destino, $ruta) : imagejpeg($destino, $ruta, 90);
-		imagedestroy($origen);
-		imagedestroy($destino);
-
-		if(!$guardado){
+		if(!move_uploaded_file($_FILES[$campoArchivo]["tmp_name"], $ruta)){
 			return false;
 		}
 
@@ -411,6 +394,7 @@ class ControladorProductos{
 				}
 	
 				$datos = array(
+					"id" => (int)($_POST["editarIdProducto"] ?? 0),
 					"id_categoria" => $_POST["editarCategoria"],
 					"id_marca" => (int)($_POST["editarMarca"] ?? 0),
 					"codigo" => $_POST["editarCodigo"],
