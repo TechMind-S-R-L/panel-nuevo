@@ -239,7 +239,11 @@ class ControladorProductos{
 			if ($respuesta == "ok") {
 
 				// Verificar el perfil del usuario desde la sesión
-				if ($_SESSION["rol"] == "almacen") {
+				$retornoProducto = $_POST["retornoProducto"] ?? "";
+				$retornosPermitidos = array("productos", "productos-almacen", "ordenes-ingreso-material");
+				if(in_array($retornoProducto, $retornosPermitidos, true)){
+					$urlRedireccion = $retornoProducto;
+				}else if ($_SESSION["rol"] == "almacen") {
 					$urlRedireccion = "ordenes-ingreso-material";
 				} else {
 					$urlRedireccion = "productos";
@@ -457,7 +461,11 @@ class ControladorProductos{
 			if ($respuesta == "ok") {
 
 				// Verificar el perfil del usuario desde la sesión
-				if ($_SESSION["rol"] == "almacen") {
+				$retornoProducto = $_POST["retornoProducto"] ?? "";
+				$retornosPermitidos = array("productos", "productos-almacen", "ordenes-ingreso-material");
+				if(in_array($retornoProducto, $retornosPermitidos, true)){
+					$urlRedireccion = $retornoProducto;
+				}else if ($_SESSION["rol"] == "almacen") {
 					$urlRedireccion = "productos-almacen";
 				} else {
 					$urlRedireccion = "productos";

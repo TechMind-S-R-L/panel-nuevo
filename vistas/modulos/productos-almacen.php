@@ -941,6 +941,7 @@ $marcasProducto = is_array($marcasProducto) ? $marcasProducto : array();
             </div>
 
             <input type="hidden" class="nuevoPorcentaje" value="0">
+            <input type="hidden" name="retornoProducto" value="productos-almacen">
           </div>
         </div>
 
@@ -1051,6 +1052,7 @@ $marcasProducto = is_array($marcasProducto) ? $marcasProducto : array();
             </div>
 
             <input type="hidden" class="nuevoPorcentaje" value="0">
+            <input type="hidden" name="retornoProducto" value="productos-almacen">
           </div>
         </div>
 
@@ -1120,7 +1122,7 @@ $marcasProducto = is_array($marcasProducto) ? $marcasProducto : array();
       </div>
       <div class="tm-product-modal-body">
         <div class="tm-product-detail-layout">
-          <div class="tm-product-detail-image"><img id="detalleProductoImagen" src="vistas/img/productos/default/anonymous.png" alt="Producto"></div>
+          <div class="tm-product-detail-image"><img id="detalleProductoImagen" src="vistas/img/productos/default/anonymous.png" alt="Producto" onerror="this.onerror=null;this.src='vistas/img/productos/default/anonymous.png';"></div>
           <div class="tm-product-detail-grid">
             <div class="tm-product-detail-box"><span>Descripcion</span><strong id="detalleProductoDescripcion">-</strong></div>
             <div class="tm-product-detail-box"><span>Categoria</span><strong id="detalleProductoCategoria">-</strong></div>
@@ -1205,7 +1207,15 @@ $marcasProducto = is_array($marcasProducto) ? $marcasProducto : array();
 
   function extraerSrc(html){
     var src = $("<div>").html(html || "").find("img").attr("src") || "";
-    return src || defaultImage;
+    return normalizarImagen(src);
+  }
+
+  function normalizarImagen(src){
+    src = (src || "").trim();
+    if(!src || src === "null" || src === "undefined"){
+      return defaultImage;
+    }
+    return src;
   }
 
   function extraerAtributo(html, atributo){
@@ -1283,7 +1293,7 @@ $marcasProducto = is_array($marcasProducto) ? $marcasProducto : array();
     var estado = stockTexto(producto.stock);
     return '<article class="tm-product-card" data-index="'+producto.index+'">'+
       '<div class="tm-product-visual">'+
-        '<div class="tm-product-image"><img src="'+escapar(producto.imagen)+'" alt="'+escapar(producto.descripcion)+'"></div>'+
+        '<div class="tm-product-image"><img src="'+escapar(normalizarImagen(producto.imagen))+'" alt="'+escapar(producto.descripcion)+'" onerror="this.onerror=null;this.src=\''+escapar(defaultImage)+'\';"></div>'+
         '<div class="tm-product-stock-wrap">'+
           '<span class="tm-product-stock-label">Stock</span>'+
           '<span class="tm-product-stock '+stockClase(producto.stock)+'">'+producto.stock+'</span>'+
@@ -1407,7 +1417,7 @@ $marcasProducto = is_array($marcasProducto) ? $marcasProducto : array();
     $("#detalleProductoTitulo").contents().filter(function(){ return this.nodeType === 3; }).remove();
     $("#detalleProductoTitulo").prepend(document.createTextNode(producto.descripcion || "Detalle de producto"));
     $("#detalleProductoCodigo").text(producto.codigo || "Producto de almacen");
-    $("#detalleProductoImagen").attr("src", producto.imagen || defaultImage);
+    $("#detalleProductoImagen").attr("src", normalizarImagen(producto.imagen));
     $("#detalleProductoDescripcion").text(producto.descripcion || "-");
     $("#detalleProductoCategoria").text(producto.categoria || "-");
     $("#detalleProductoCodigoGeneral").text(producto.codigoGeneral || "-");
