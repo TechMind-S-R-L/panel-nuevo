@@ -176,7 +176,7 @@ $(".nuevaImagen").change(function() {
   /*=============================================
   	VALIDAMOS EL FORMATO DE LA IMAGEN SEA JPG O PNG
   	=============================================*/
-  if(imagen["type"] != "image/jpg" && imagen["type"] != "image/png") {
+  if(imagen["type"] != "image/jpg" && imagen["type"] != "image/jpeg" && imagen["type"] != "image/pjpeg" && imagen["type"] != "image/png") {
    $(".nuevaImagen").val("");
    swal({
     title: "Error al subir la imagen",

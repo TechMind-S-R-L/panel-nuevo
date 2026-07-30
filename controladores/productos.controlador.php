@@ -2,6 +2,69 @@
 
 class ControladorProductos{
 
+	static private function ctrProcesarImagenProducto($campoArchivo, $codigoProducto, $rutaActual = ""){
+		$rutaDefault = "vistas/img/productos/default/anonymous.png";
+
+		if(!isset($_FILES[$campoArchivo]) || empty($_FILES[$campoArchivo]["tmp_name"]) || !is_uploaded_file($_FILES[$campoArchivo]["tmp_name"])){
+			return $rutaActual !== "" ? $rutaActual : $rutaDefault;
+		}
+
+		$infoImagen = @getimagesize($_FILES[$campoArchivo]["tmp_name"]);
+		$mimeImagen = strtolower((string)($infoImagen["mime"] ?? ""));
+		if(!$infoImagen || !in_array($mimeImagen, array("image/jpeg", "image/jpg", "image/pjpeg", "image/png"), true)){
+			return false;
+		}
+
+		$ancho = (int)$infoImagen[0];
+		$alto = (int)$infoImagen[1];
+		if($ancho <= 0 || $alto <= 0){
+			return false;
+		}
+
+		$nuevoAncho = 500;
+		$nuevoAlto = 500;
+		$directorio = "vistas/img/productos/".$codigoProducto;
+		if(!is_dir($directorio) && !mkdir($directorio, 0755, true)){
+			return false;
+		}
+
+		$aleatorio = mt_rand(100,999);
+		if($mimeImagen === "image/png"){
+			$ruta = $directorio."/".$aleatorio.".png";
+			$origen = @imagecreatefrompng($_FILES[$campoArchivo]["tmp_name"]);
+		}else{
+			$ruta = $directorio."/".$aleatorio.".jpg";
+			$origen = @imagecreatefromjpeg($_FILES[$campoArchivo]["tmp_name"]);
+		}
+
+		if(!$origen){
+			return false;
+		}
+
+		$destino = imagecreatetruecolor($nuevoAncho, $nuevoAlto);
+		if($mimeImagen === "image/png"){
+			imagealphablending($destino, false);
+			imagesavealpha($destino, true);
+			$transparente = imagecolorallocatealpha($destino, 255, 255, 255, 127);
+			imagefilledrectangle($destino, 0, 0, $nuevoAncho, $nuevoAlto, $transparente);
+		}
+
+		imagecopyresampled($destino, $origen, 0, 0, 0, 0, $nuevoAncho, $nuevoAlto, $ancho, $alto);
+		$guardado = $mimeImagen === "image/png" ? imagepng($destino, $ruta) : imagejpeg($destino, $ruta, 90);
+		imagedestroy($origen);
+		imagedestroy($destino);
+
+		if(!$guardado){
+			return false;
+		}
+
+		if($rutaActual !== "" && $rutaActual !== $rutaDefault && $rutaActual !== $ruta && is_file($rutaActual)){
+			@unlink($rutaActual);
+		}
+
+		return $ruta;
+	}
+
 	static public function ctrMostrarMarcasActivas(){
 		return ModeloProductos::mdlMostrarMarcasActivas();
 	}
@@ -99,67 +162,18 @@ class ControladorProductos{
 				VALIDAR IMAGEN
 				=============================================*/
 
-			   	$ruta = "vistas/img/productos/default/anonymous.png";
-
-			   	if(isset($_FILES["nuevaImagen"]["tmp_name"])){
-
-					list($ancho, $alto) = getimagesize($_FILES["nuevaImagen"]["tmp_name"]);
-
-					$nuevoAncho = 500;
-					$nuevoAlto = 500;
-
-					/*=============================================
-					CREAMOS EL DIRECTORIO DONDE VAMOS A GUARDAR LA FOTO DEL USUARIO
-					=============================================*/
-
-					$directorio = "vistas/img/productos/".$codigoTechMind;
-
-					mkdir($directorio, 0755);
-
-					/*=============================================
-					DE ACUERDO AL TIPO DE IMAGEN APLICAMOS LAS FUNCIONES POR DEFECTO DE PHP
-					=============================================*/
-
-					if($_FILES["nuevaImagen"]["type"] == "image/jpeg"){
-
-						/*=============================================
-						GUARDAMOS LA IMAGEN EN EL DIRECTORIO
-						=============================================*/
-
-						$aleatorio = mt_rand(100,999);
-
-						$ruta = "vistas/img/productos/".$codigoTechMind."/".$aleatorio.".jpeg";
-
-						$origen = imagecreatefromjpeg($_FILES["nuevaImagen"]["tmp_name"]);						
-
-						$destino = imagecreatetruecolor($nuevoAncho, $nuevoAlto);
-
-						imagecopyresized($destino, $origen, 0, 0, 0, 0, $nuevoAncho, $nuevoAlto, $ancho, $alto);
-
-						imagejpeg($destino, $ruta);
-
-					}
-
-					if($_FILES["nuevaImagen"]["type"] == "image/png"){
-
-						/*=============================================
-						GUARDAMOS LA IMAGEN EN EL DIRECTORIO
-						=============================================*/
-
-						$aleatorio = mt_rand(100,999);
-
-						$ruta = "vistas/img/productos/".$codigoTechMind."/".$aleatorio.".png";
-
-						$origen = imagecreatefrompng($_FILES["nuevaImagen"]["tmp_name"]);						
-
-						$destino = imagecreatetruecolor($nuevoAncho, $nuevoAlto);
-
-						imagecopyresized($destino, $origen, 0, 0, 0, 0, $nuevoAncho, $nuevoAlto, $ancho, $alto);
-
-						imagepng($destino, $ruta);
-
-					}
-
+			   	$ruta = self::ctrProcesarImagenProducto("nuevaImagen", $codigoTechMind);
+				if($ruta === false){
+					echo '<script>
+						swal({
+							type: "error",
+							title: "Error al subir la imagen",
+							text: "La imagen debe ser JPG, JPEG o PNG y el servidor debe poder guardarla.",
+							showConfirmButton: true,
+							confirmButtonText: "Cerrar"
+						});
+					</script>';
+					return;
 				}
 
 				$tabla = "productos";
@@ -328,7 +342,7 @@ class ControladorProductos{
 					DE ACUERDO AL TIPO DE IMAGEN APLICAMOS LAS FUNCIONES POR DEFECTO DE PHP
 					=============================================*/
 	
-					if($_FILES["editarImagen"]["type"] == "image/jpeg"){
+					if(in_array($_FILES["editarImagen"]["type"], array("image/jpeg", "image/jpg", "image/pjpeg"), true)){
 	
 						/*=============================================
 						GUARDAMOS LA IMAGEN EN EL DIRECTORIO

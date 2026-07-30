@@ -20,12 +20,12 @@ if (!$ingreso) {
 
 $codigos = json_decode($ingreso["codigos_unicos"], true);
 if (!is_array($codigos) || !$codigos) {
-    die("Este ingreso no tiene cГіdigos para imprimir.");
+    die("Este ingreso no tiene códigos para imprimir.");
 }
 
 chdir(__DIR__);
 require_once "tcpdf_include_notaventa.php";
-require_once __DIR__ . '/pdf-empresa-config.php';
+require_once __DIR__ . "/pdf-empresa-config.php";
 
 $pdf = new TCPDF("P", "mm", "A4", true, "UTF-8", false);
 $pdf->SetCreator("TechMind");
@@ -46,6 +46,7 @@ $separacionY = 2;
 $inicioX = 7;
 $inicioY = 8;
 $porPagina = $columnas * $filas;
+
 $nombre = mb_strtoupper((string)$ingreso["descripcion"], "UTF-8");
 if (mb_strlen($nombre, "UTF-8") > 46) {
     $nombre = mb_substr($nombre, 0, 43, "UTF-8")."...";
@@ -72,6 +73,7 @@ foreach ($codigos as $indice => $codigo) {
     if ($indice > 0 && $indice % $porPagina === 0) {
         $pdf->AddPage();
     }
+
     $posicion = $indice % $porPagina;
     $columna = $posicion % $columnas;
     $fila = floor($posicion / $columnas);
@@ -85,7 +87,7 @@ foreach ($codigos as $indice => $codigo) {
     $pdf->SetTextColor(24, 75, 134);
     $pdf->SetFont("helvetica", "B", 7.5);
     $pdf->SetXY($x + 2, $y + 1.8);
-    $pdf->Cell($anchoEtiqueta - 4, 4, tmPdfEmpresaTexto('nombre'), 0, 0, "C");
+    $pdf->Cell($anchoEtiqueta - 4, 4, tmPdfEmpresaTexto("nombre"), 0, 0, "C");
 
     $pdf->SetTextColor(28, 43, 56);
     $pdf->SetFont("helvetica", "B", 6.5);
@@ -108,20 +110,6 @@ foreach ($codigos as $indice => $codigo) {
     $pdf->SetFont("helvetica", "B", 7);
     $pdf->SetXY($x + 2, $y + 27);
     $pdf->Cell($anchoEtiqueta - 4, 4, (string)$codigo, 0, 0, "C");
-
-    $pdf->SetTextColor(83, 105, 122);
-    $pdf->SetFont("helvetica", "", 5.7);
-    $pdf->SetXY($x + 2, $y + 31);
-    $pdf->Cell(
-        $anchoEtiqueta - 4,
-        3,
-        "General: ".$ingreso["codigo_general"]." В· Bs ".number_format((float)$ingreso["precio_venta"], 2),
-        0,
-        0,
-        "C"
-    );
-    $pdf->SetXY($x + 2, $y + 34);
-    $pdf->Cell($anchoEtiqueta - 4, 3, "Ingreso #".$idIngreso." В· ".date("d/m/Y", strtotime($ingreso["fecha"])), 0, 0, "C");
 }
 
 ob_end_clean();
