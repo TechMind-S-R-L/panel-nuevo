@@ -3189,6 +3189,7 @@ CUERPO DOCUMENTO
          $_GET["ruta"] == "recepcion-equipos-taller" ||
          $_GET["ruta"] == "repuestos-taller-almacen" ||
          $_GET["ruta"] == "productos-cajero" ||
+         $_GET["ruta"] == "productos-precios" ||
          $_GET["ruta"] == "compras-almacen" ||
          $_GET["ruta"] == "compras-cajero" ||
          $_GET["ruta"] == "proveedor" ||

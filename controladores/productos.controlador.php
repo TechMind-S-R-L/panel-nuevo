@@ -517,6 +517,19 @@ class ControladorProductos{
 
 	public function ctrEditarProductoCajero() {
 		if (isset($_POST["nuevoPrecioCompra"]) && isset($_POST["nuevoPrecioVenta"]) && isset($_POST["idProducto"])) {
+			$retornoPrecio = $_POST["retornoPrecioProducto"] ?? "productos-cajero";
+			$retornoPermitido = in_array($retornoPrecio, array("productos-cajero", "productos-precios"), true) ? $retornoPrecio : "productos-cajero";
+
+			if($retornoPermitido === "productos-precios" && ($_SESSION["perfil"] ?? "") != "Administrador"){
+				echo '<script>window.location = "inicio";</script>';
+				return;
+			}
+
+			if($retornoPermitido === "productos-cajero" && ($_SESSION["perfil"] ?? "") != "Administrador" && ($_SESSION["rol"] ?? "") != "cajero"){
+				echo '<script>window.location = "inicio";</script>';
+				return;
+			}
+
 			$tabla = "productos";
 	
 			$datos = array(
@@ -541,7 +554,7 @@ class ControladorProductos{
 						confirmButtonText: 'Cerrar'
 					}).then((result) => {
 						if (result.isConfirmed) {
-							window.location = 'productos-cajero';
+							window.location = '".$retornoPermitido."';
 						}
 					});
 				</script>";

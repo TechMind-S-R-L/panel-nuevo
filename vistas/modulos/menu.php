@@ -2377,6 +2377,9 @@ if($perfilMenu == "Administrador"){
           <a href="#"><i class="fa fa-tag"></i> <span>Gestion de Precios</span><?php echo tmMenuBadge($menuParentBadges["precios"]); ?><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
           <ul class="treeview-menu">
             <li><a href="productos-cajero"><i class="fa fa-cube"></i> Precios de Productos <?php echo tmMenuBadge($menuBadges["productos-cajero"]); ?></a></li>
+            <?php if ($perfilMenu == "Administrador") : ?>
+              <li><a href="productos-precios"><i class="fa fa-pencil-square-o"></i> Editar precios de productos</a></li>
+            <?php endif; ?>
             <li><a href="precios-servicios"><i class="fa fa-wrench"></i> Precios de Servicios</a></li>
           </ul>
         </li>
