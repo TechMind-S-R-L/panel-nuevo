@@ -4,30 +4,23 @@ require_once "conexion.php";
 
 class ModeloClientes{
 
-	static private function mdlAsegurarColumnasCliente($tabla){
+	static private function mdlColumnasDisponibles($tabla){
 		$conexion = Conexion::conectar();
-		$columnas = array(
-			"email" => "VARCHAR(100) NULL DEFAULT ''",
-			"telefono" => "VARCHAR(30) NULL DEFAULT ''",
-			"direccion" => "VARCHAR(255) NULL DEFAULT ''",
-			"fecha_nacimiento" => "DATE NULL"
-		);
+		$columnas = array();
 
-		foreach($columnas as $columna => $definicion){
-			try{
-				$stmt = $conexion->prepare("SHOW COLUMNS FROM $tabla LIKE :columna");
-				$stmt->execute(array(":columna" => $columna));
-				if(!$stmt->fetch()){
-					$conexion->exec("ALTER TABLE $tabla ADD $columna $definicion");
-				}else{
-					$conexion->exec("ALTER TABLE $tabla MODIFY $columna $definicion");
+		try{
+			$stmt = $conexion->prepare("SHOW COLUMNS FROM $tabla");
+			$stmt->execute();
+			foreach($stmt->fetchAll(PDO::FETCH_ASSOC) as $columna){
+				if(isset($columna["Field"])){
+					$columnas[$columna["Field"]] = true;
 				}
-			}catch(Exception $e){
-				return false;
 			}
+		}catch(Exception $e){
+			return array();
 		}
 
-		return true;
+		return $columnas;
 	}
 
 	static private function mdlNormalizarFechaCliente($fecha){
@@ -57,17 +50,27 @@ class ModeloClientes{
 	=============================================*/
 
 	static public function mdlIngresarCliente($tabla, $datos){
-		self::mdlAsegurarColumnasCliente($tabla);
+		$columnasDisponibles = self::mdlColumnasDisponibles($tabla);
 		$fechaNacimiento = self::mdlNormalizarFechaCliente($datos["fecha_nacimiento"] ?? null);
 
-		$stmt = Conexion::conectar()->prepare("INSERT INTO $tabla(nombre, documento, email, telefono, direccion, fecha_nacimiento) VALUES (:nombre, :documento, :email, :telefono, :direccion, :fecha_nacimiento)");
+		$columnas = array("nombre", "documento");
+		$valores = array(":nombre", ":documento");
+
+		foreach(array("email", "telefono", "direccion", "fecha_nacimiento") as $columnaOpcional){
+			if(isset($columnasDisponibles[$columnaOpcional])){
+				$columnas[] = $columnaOpcional;
+				$valores[] = ":".$columnaOpcional;
+			}
+		}
+
+		$stmt = Conexion::conectar()->prepare("INSERT INTO $tabla(".implode(", ", $columnas).") VALUES (".implode(", ", $valores).")");
 
 		$stmt->bindParam(":nombre", $datos["nombre"], PDO::PARAM_STR);
 		$stmt->bindParam(":documento", $datos["documento"], PDO::PARAM_INT);
-		$stmt->bindParam(":email", $datos["email"], PDO::PARAM_STR);
-		$stmt->bindParam(":telefono", $datos["telefono"], PDO::PARAM_STR);
-		$stmt->bindParam(":direccion", $datos["direccion"], PDO::PARAM_STR);
-		$stmt->bindValue(":fecha_nacimiento", $fechaNacimiento, $fechaNacimiento === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+		if(isset($columnasDisponibles["email"])){ $stmt->bindParam(":email", $datos["email"], PDO::PARAM_STR); }
+		if(isset($columnasDisponibles["telefono"])){ $stmt->bindParam(":telefono", $datos["telefono"], PDO::PARAM_STR); }
+		if(isset($columnasDisponibles["direccion"])){ $stmt->bindParam(":direccion", $datos["direccion"], PDO::PARAM_STR); }
+		if(isset($columnasDisponibles["fecha_nacimiento"])){ $stmt->bindValue(":fecha_nacimiento", $fechaNacimiento, $fechaNacimiento === null ? PDO::PARAM_NULL : PDO::PARAM_STR); }
 
 		if($stmt->execute()){
 
@@ -121,18 +124,25 @@ class ModeloClientes{
 	=============================================*/
 
 	static public function mdlEditarCliente($tabla, $datos){
-		self::mdlAsegurarColumnasCliente($tabla);
+		$columnasDisponibles = self::mdlColumnasDisponibles($tabla);
 		$fechaNacimiento = self::mdlNormalizarFechaCliente($datos["fecha_nacimiento"] ?? null);
 
-		$stmt = Conexion::conectar()->prepare("UPDATE $tabla SET nombre = :nombre, documento = :documento, email = :email, telefono = :telefono, direccion = :direccion, fecha_nacimiento = :fecha_nacimiento WHERE id = :id");
+		$sets = array("nombre = :nombre", "documento = :documento");
+		foreach(array("email", "telefono", "direccion", "fecha_nacimiento") as $columnaOpcional){
+			if(isset($columnasDisponibles[$columnaOpcional])){
+				$sets[] = $columnaOpcional." = :".$columnaOpcional;
+			}
+		}
+
+		$stmt = Conexion::conectar()->prepare("UPDATE $tabla SET ".implode(", ", $sets)." WHERE id = :id");
 
 		$stmt->bindParam(":id", $datos["id"], PDO::PARAM_INT);
 		$stmt->bindParam(":nombre", $datos["nombre"], PDO::PARAM_STR);
 		$stmt->bindParam(":documento", $datos["documento"], PDO::PARAM_INT);
-		$stmt->bindParam(":email", $datos["email"], PDO::PARAM_STR);
-		$stmt->bindParam(":telefono", $datos["telefono"], PDO::PARAM_STR);
-		$stmt->bindParam(":direccion", $datos["direccion"], PDO::PARAM_STR);
-		$stmt->bindValue(":fecha_nacimiento", $fechaNacimiento, $fechaNacimiento === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+		if(isset($columnasDisponibles["email"])){ $stmt->bindParam(":email", $datos["email"], PDO::PARAM_STR); }
+		if(isset($columnasDisponibles["telefono"])){ $stmt->bindParam(":telefono", $datos["telefono"], PDO::PARAM_STR); }
+		if(isset($columnasDisponibles["direccion"])){ $stmt->bindParam(":direccion", $datos["direccion"], PDO::PARAM_STR); }
+		if(isset($columnasDisponibles["fecha_nacimiento"])){ $stmt->bindValue(":fecha_nacimiento", $fechaNacimiento, $fechaNacimiento === null ? PDO::PARAM_NULL : PDO::PARAM_STR); }
 
 		if($stmt->execute()){
 
