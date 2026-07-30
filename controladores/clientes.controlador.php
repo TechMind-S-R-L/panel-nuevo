@@ -132,6 +132,16 @@ class ControladorClientes{
 						}
 					});
 				</script>';
+			}else{
+				echo '<script>
+					swal({
+						type: "error",
+						title: "No se pudo guardar el cliente",
+						text: "Revise si el documento ya existe o si la base de datos tiene permisos para actualizar la tabla clientes.",
+						showConfirmButton: true,
+						confirmButtonText: "Cerrar"
+					});
+				</script>';
 			}
 		}
 	}
@@ -174,6 +184,16 @@ class ControladorClientes{
 						if(result.value){
 							window.location = "clientes";
 						}
+					});
+				</script>';
+			}else{
+				echo '<script>
+					swal({
+						type: "error",
+						title: "No se pudo actualizar el cliente",
+						text: "Revise los datos ingresados o la estructura de la tabla clientes.",
+						showConfirmButton: true,
+						confirmButtonText: "Cerrar"
 					});
 				</script>';
 			}

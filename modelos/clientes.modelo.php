@@ -4,11 +4,36 @@ require_once "conexion.php";
 
 class ModeloClientes{
 
+	static private function mdlAsegurarColumnasCliente($tabla){
+		$conexion = Conexion::conectar();
+		$columnas = array(
+			"email" => "VARCHAR(100) NULL DEFAULT ''",
+			"telefono" => "VARCHAR(30) NULL DEFAULT ''",
+			"direccion" => "VARCHAR(255) NULL DEFAULT ''",
+			"fecha_nacimiento" => "DATE NULL"
+		);
+
+		foreach($columnas as $columna => $definicion){
+			try{
+				$stmt = $conexion->prepare("SHOW COLUMNS FROM $tabla LIKE :columna");
+				$stmt->execute(array(":columna" => $columna));
+				if(!$stmt->fetch()){
+					$conexion->exec("ALTER TABLE $tabla ADD $columna $definicion");
+				}
+			}catch(Exception $e){
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	/*=============================================
 	CREAR CLIENTE
 	=============================================*/
 
 	static public function mdlIngresarCliente($tabla, $datos){
+		self::mdlAsegurarColumnasCliente($tabla);
 
 		$stmt = Conexion::conectar()->prepare("INSERT INTO $tabla(nombre, documento, email, telefono, direccion, fecha_nacimiento) VALUES (:nombre, :documento, :email, :telefono, :direccion, :fecha_nacimiento)");
 
@@ -71,6 +96,7 @@ class ModeloClientes{
 	=============================================*/
 
 	static public function mdlEditarCliente($tabla, $datos){
+		self::mdlAsegurarColumnasCliente($tabla);
 
 		$stmt = Conexion::conectar()->prepare("UPDATE $tabla SET nombre = :nombre, documento = :documento, email = :email, telefono = :telefono, direccion = :direccion, fecha_nacimiento = :fecha_nacimiento WHERE id = :id");
 
