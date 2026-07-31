@@ -161,7 +161,7 @@ function reporteFinanzasVentas($db, $ventas) {
 	return $resultado;
 }
 
-function reporteHeader($pdf, $titulo, $fechaInicial, $fechaFinal) {
+function reporteHeader($pdf, $titulo, $fechaInicial, $fechaFinal, $ventaIndividual = false) {
 	$pdf->SetAlpha(0.08);
 	RotatedTextReporteSistema($pdf, 28, 180, 'REPORTE', 45);
 	$pdf->Image('images/ICONO.png', 45, 82, 120);
@@ -188,17 +188,19 @@ function reporteHeader($pdf, $titulo, $fechaInicial, $fechaFinal) {
 	$pdf->Cell(75, 7, $titulo, 0, 1, 'R');
 	$pdf->SetFont('helvetica', '', 9);
 	$pdf->SetXY(120, 22);
-	$pdf->Cell(75, 6, 'DESDE: '.date("d/m/Y", strtotime($fechaInicial)), 0, 1, 'R');
+	if($ventaIndividual) {
+		$pdf->Cell(75, 6, 'REPORTE INDIVIDUAL', 0, 1, 'R');
+	}else{
+		$pdf->Cell(75, 6, 'PERIODO: '.date("d/m/Y", strtotime($fechaInicial)).' - '.date("d/m/Y", strtotime($fechaFinal)), 0, 1, 'R');
+	}
 	$pdf->SetXY(120, 28);
-	$pdf->Cell(75, 6, 'HASTA: '.date("d/m/Y", strtotime($fechaFinal)), 0, 1, 'R');
-	$pdf->SetXY(125, 32);
 	$pdf->Cell(75, 6, 'EMITIDO: '.date("d/m/Y H:i"), 0, 1, 'R');
 	$pdf->SetTextColor(0);
-	$pdf->Ln(16);
+	$pdf->Ln(10);
 }
 
 function reporteSectionTitle($pdf, $titulo) {
-	$pdf->Ln(4);
+	$pdf->Ln(2);
 	$pdf->SetFont('helvetica', 'B', 10);
 	$pdf->SetFillColor(18, 62, 88);
 	$pdf->SetTextColor(255);
@@ -207,30 +209,65 @@ function reporteSectionTitle($pdf, $titulo) {
 }
 
 function reporteSummaryCards($pdf, $items) {
-	$html = '<table cellspacing="4" cellpadding="6" style="font-size:8px;">';
-	$contador = 0;
+	$items = array_slice($items, 0, 4, true);
+	$gap = 2;
+	$cardWidth = (190 - ($gap * 3)) / 4;
+	$cardHeight = 18;
+	$xInicio = $pdf->GetX();
+	$y = $pdf->GetY() + 2;
+	if($y + $cardHeight > 270) {
+		$pdf->AddPage();
+		$xInicio = $pdf->GetX();
+		$y = $pdf->GetY();
+	}
+	$i = 0;
 	foreach($items as $label => $value) {
-		if($contador % 4 == 0) {
-			$html .= '<tr>';
-		}
-		$html .= '<td width="45" style="border:1px solid #b8d4e6;background-color:#f7fbff;">
-			<span style="color:#5f7890;font-weight:bold;">'.reporteText($label).'</span><br>
-			<span style="font-size:11px;font-weight:bold;color:#123044;">'.reporteText($value).'</span>
-		</td>';
-		if($contador % 4 == 3) {
-			$html .= '</tr>';
-		}
-		$contador++;
+		$x = $xInicio + ($i * ($cardWidth + $gap));
+		$pdf->SetDrawColor(184, 212, 230);
+		$pdf->SetFillColor(247, 251, 255);
+		$pdf->RoundedRect($x, $y, $cardWidth, $cardHeight, 1.7, '1111', 'DF');
+		$pdf->SetXY($x + 2.5, $y + 2.2);
+		$pdf->SetTextColor(95, 120, 144);
+		$pdf->SetFont('helvetica', 'B', 6.4);
+		$pdf->MultiCell($cardWidth - 5, 5, reportePdfText($label), 0, 'L', false, 1, '', '', true, 0, false, true, 5, 'T');
+		$pdf->SetXY($x + 2.5, $y + 8.5);
+		$pdf->SetTextColor(18, 48, 68);
+		$pdf->SetFont('helvetica', 'B', 10);
+		$pdf->MultiCell($cardWidth - 5, 7, reportePdfText($value), 0, 'L', false, 1, '', '', true, 0, false, true, 7, 'M');
+		$i++;
 	}
-	if($contador % 4 != 0) {
-		while($contador % 4 != 0) {
-			$html .= '<td width="45"></td>';
-			$contador++;
-		}
-		$html .= '</tr>';
+	$pdf->SetTextColor(0);
+	$pdf->SetY($y + $cardHeight + 4);
+}
+
+function reporteVentaNota($pdf, $texto) {
+	if(trim((string)$texto) === "") {
+		return;
 	}
-	$html .= '</table>';
-	$pdf->writeHTML($html, true, false, true, false, '');
+	if($pdf->GetY() + 8 > 270) {
+		$pdf->AddPage();
+	}
+	$pdf->SetFont('helvetica', '', 7.5);
+	$pdf->SetTextColor(84, 103, 121);
+	$pdf->SetFillColor(247, 251, 255);
+	$pdf->SetDrawColor(218, 233, 247);
+	$pdf->MultiCell(190, 7, reportePdfText($texto), 1, 'L', true, 1);
+	$pdf->SetTextColor(0);
+	$pdf->Ln(1);
+}
+
+function reporteSubtituloTabla($pdf, $texto) {
+	if(trim((string)$texto) === "") {
+		return;
+	}
+	if($pdf->GetY() + 7 > 270) {
+		$pdf->AddPage();
+	}
+	$pdf->SetFont('helvetica', 'B', 8);
+	$pdf->SetTextColor(18, 62, 88);
+	$pdf->SetFillColor(236, 246, 253);
+	$pdf->Cell(190, 7, reportePdfText($texto), 0, 1, 'L', true);
+	$pdf->SetTextColor(0);
 }
 
 function reporteHtmlTable($pdf, $headers, $rows, $widths) {
@@ -259,6 +296,7 @@ function reporteHtmlTable($pdf, $headers, $rows, $widths) {
 	if(count($rows) == 0) {
 		$pdf->SetFont('helvetica', '', 8);
 		$pdf->SetTextColor(0);
+		$pdf->SetFillColor(255, 255, 255);
 		$pdf->MultiCell(array_sum($widths), 8, 'Sin registros para este reporte.', 1, 'C', true, 1);
 		return;
 	}
@@ -289,6 +327,7 @@ function reporteHtmlTable($pdf, $headers, $rows, $widths) {
 		if($fill) {
 			$pdf->SetFillColor(247, 251, 253);
 		}else{
+			$pdf->SetFillColor(255, 255, 255);
 		}
 		$x = $pdf->GetX();
 		$y = $pdf->GetY();
@@ -534,7 +573,7 @@ $tituloReporte = $titulos[$tipo];
 if($tipo === "ventas" && $ventaReporteId > 0 && count($ventasCobradas) > 0) {
 	$tituloReporte = "REPORTE VENTA ".$ventasCobradas[0]["codigo"];
 }
-reporteHeader($pdf, $tituloReporte, $fechaInicial, $fechaFinal);
+reporteHeader($pdf, $tituloReporte, $fechaInicial, $fechaFinal, $tipo === "ventas" && $ventaReporteId > 0);
 
 if($tipo == "general") {
 	reporteSectionTitle($pdf, "RESUMEN GENERAL");
