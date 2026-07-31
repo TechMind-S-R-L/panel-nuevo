@@ -200,30 +200,34 @@ function reporteHeader($pdf, $titulo, $fechaInicial, $fechaFinal) {
 function reporteSectionTitle($pdf, $titulo) {
 	$pdf->Ln(4);
 	$pdf->SetFont('helvetica', 'B', 10);
-	$pdf->SetFillColor(22, 49, 64);
+	$pdf->SetFillColor(18, 62, 88);
 	$pdf->SetTextColor(255);
 	$pdf->Cell(190, 8, $titulo, 0, 1, 'C', true);
 	$pdf->SetTextColor(0);
 }
 
 function reporteSummaryCards($pdf, $items) {
-	$html = '<table cellspacing="5" cellpadding="7" style="font-size:9px;">';
+	$html = '<table cellspacing="4" cellpadding="6" style="font-size:8px;">';
 	$contador = 0;
 	foreach($items as $label => $value) {
-		if($contador % 2 == 0) {
+		if($contador % 4 == 0) {
 			$html .= '<tr>';
 		}
-		$html .= '<td width="92" style="border:1px solid #b8d4e6;background-color:#f4f9fc;">
-			<span style="color:#4a6c7d;font-weight:bold;">'.reporteText($label).'</span><br>
-			<span style="font-size:14px;font-weight:bold;color:#163140;">'.reporteText($value).'</span>
+		$html .= '<td width="45" style="border:1px solid #b8d4e6;background-color:#f7fbff;">
+			<span style="color:#5f7890;font-weight:bold;">'.reporteText($label).'</span><br>
+			<span style="font-size:11px;font-weight:bold;color:#123044;">'.reporteText($value).'</span>
 		</td>';
-		if($contador % 2 == 1) {
+		if($contador % 4 == 3) {
 			$html .= '</tr>';
 		}
 		$contador++;
 	}
-	if($contador % 2 == 1) {
-		$html .= '<td width="92"></td></tr>';
+	if($contador % 4 != 0) {
+		while($contador % 4 != 0) {
+			$html .= '<td width="45"></td>';
+			$contador++;
+		}
+		$html .= '</tr>';
 	}
 	$html .= '</table>';
 	$pdf->writeHTML($html, true, false, true, false, '');
@@ -336,8 +340,16 @@ $fechaFinal = reporteFechaValida($_GET["fechaFinal"] ?? null, date("Y-m-d"));
 $inicio = $fechaInicial." 00:00:00";
 $fin = $fechaFinal." 23:59:59";
 $params = array(":inicio" => $inicio, ":fin" => $fin);
+$ventaReporteId = max(0, (int)($_GET["idVenta"] ?? 0));
 
 $db = Conexion::conectar();
+
+$whereVentasCobradas = "v.estado_pago = 'aprobado' AND COALESCE(v.fecha_pago, v.fecha) BETWEEN :inicio AND :fin";
+$paramsVentasCobradas = $params;
+if($ventaReporteId > 0) {
+	$whereVentasCobradas .= " AND v.id = :id_venta_reporte";
+	$paramsVentasCobradas[":id_venta_reporte"] = $ventaReporteId;
+}
 
 $ventasCobradas = reporteRows($db,
 	"SELECT v.*, COALESCE(v.fecha_pago, v.fecha) AS fecha_reporte, c.nombre AS cliente, uv.nombre AS vendedor, uc.nombre AS cajero
@@ -345,9 +357,9 @@ $ventasCobradas = reporteRows($db,
 	 LEFT JOIN clientes c ON c.id = v.id_cliente
 	 LEFT JOIN usuarios uv ON uv.id = v.id_vendedor
 	 LEFT JOIN usuarios uc ON uc.id = v.id_cajero
-	 WHERE v.estado_pago = 'aprobado' AND COALESCE(v.fecha_pago, v.fecha) BETWEEN :inicio AND :fin
+	 WHERE ".$whereVentasCobradas."
 	 ORDER BY fecha_reporte DESC, v.id DESC",
-	$params
+	$paramsVentasCobradas
 );
 
 $serviciosCobrados = reporteRows($db,
@@ -518,7 +530,11 @@ $titulos = array(
 $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
 $pdf->startPageGroup();
 $pdf->AddPage();
-reporteHeader($pdf, $titulos[$tipo], $fechaInicial, $fechaFinal);
+$tituloReporte = $titulos[$tipo];
+if($tipo === "ventas" && $ventaReporteId > 0 && count($ventasCobradas) > 0) {
+	$tituloReporte = "REPORTE VENTA ".$ventasCobradas[0]["codigo"];
+}
+reporteHeader($pdf, $tituloReporte, $fechaInicial, $fechaFinal);
 
 if($tipo == "general") {
 	reporteSectionTitle($pdf, "RESUMEN GENERAL");

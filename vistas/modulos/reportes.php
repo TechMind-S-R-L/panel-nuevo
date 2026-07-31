@@ -828,9 +828,21 @@ $serviciosPorTipo = tmReporteRows($dbReportes,
     background:rgba(255,255,255,.88);
     box-shadow:0 10px 24px rgba(22,78,132,.08);
     overflow:hidden;
-    min-height:210px;
+    min-height:170px;
     display:flex;
     flex-direction:column;
+    cursor:default;
+    transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  }
+
+  .tm-report-card.clickable{
+    cursor:pointer;
+  }
+
+  .tm-report-card.clickable:hover{
+    transform:translateY(-3px);
+    border-color:#8ec8ed;
+    box-shadow:0 16px 34px rgba(22,78,132,.14);
   }
 
   .tm-report-card-head{
@@ -916,6 +928,10 @@ $serviciosPorTipo = tmReporteRows($dbReportes,
     margin:10px 0 0;
   }
 
+  .tm-report-card .tm-report-finance-strip{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
   .tm-report-product-list{
     margin-top:10px;
     border:1px dashed #c9dff4;
@@ -949,6 +965,98 @@ $serviciosPorTipo = tmReporteRows($dbReportes,
   .tm-report-product-row span{
     color:#6d819b;
     font-weight:800;
+  }
+
+  .tm-report-card-action{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    margin-top:2px;
+    color:#1a7fb0;
+    font-size:11px;
+    font-weight:900;
+    text-transform:uppercase;
+  }
+
+  .tm-report-modal .modal-content{
+    border:0;
+    border-radius:22px;
+    overflow:hidden;
+    box-shadow:0 28px 70px rgba(7,34,60,.28);
+  }
+
+  .tm-report-modal .modal-header{
+    background:linear-gradient(135deg,#123044,#239bca);
+    color:#fff;
+    border:0;
+    padding:18px 22px;
+  }
+
+  .tm-report-modal .modal-title{
+    font-weight:900;
+  }
+
+  .tm-report-modal .modal-body{
+    background:#f6fbff;
+    padding:18px;
+  }
+
+  .tm-report-modal-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:10px;
+    margin-bottom:14px;
+  }
+
+  .tm-report-modal-box{
+    border:1px solid #d9e9f7;
+    border-radius:14px;
+    background:#fff;
+    padding:10px;
+    color:#21384f;
+    font-weight:900;
+  }
+
+  .tm-report-modal-box b{
+    display:block;
+    color:#7188a0;
+    font-size:10px;
+    text-transform:uppercase;
+    margin-bottom:4px;
+  }
+
+  .tm-report-modal-table{
+    width:100%;
+    border-collapse:separate;
+    border-spacing:0 8px;
+    font-size:12px;
+  }
+
+  .tm-report-modal-table th{
+    color:#6c8198;
+    font-size:10px;
+    text-transform:uppercase;
+    padding:0 8px;
+  }
+
+  .tm-report-modal-table td{
+    background:#fff;
+    border-top:1px solid #dceaf7;
+    border-bottom:1px solid #dceaf7;
+    padding:10px 8px;
+    color:#21384f;
+    font-weight:800;
+  }
+
+  .tm-report-modal-table td:first-child{
+    border-left:1px solid #dceaf7;
+    border-radius:12px 0 0 12px;
+  }
+
+  .tm-report-modal-table td:last-child{
+    border-right:1px solid #dceaf7;
+    border-radius:0 12px 12px 0;
   }
 
   .tm-report-badges{
@@ -1121,6 +1229,10 @@ $serviciosPorTipo = tmReporteRows($dbReportes,
       justify-content:flex-start;
     }
 
+    .tm-report-modal-grid{
+      grid-template-columns:1fr;
+    }
+
     .tm-report-btn{
       width:100%;
     }
@@ -1220,7 +1332,7 @@ $serviciosPorTipo = tmReporteRows($dbReportes,
               <?php endif; ?>
               <?php foreach($ventasProductos as $venta): ?>
                 <?php $finanzaVenta = $ventasProductosFinanzas["ventas"][(int)($venta["id"] ?? 0)] ?? array("items" => array(), "capital" => 0, "impuesto" => 0, "ganancia_bruta" => 0, "ganancia_liquida" => 0); ?>
-                <article class="tm-report-card">
+                <article class="tm-report-card clickable" data-toggle="modal" data-target="#modalReporteVenta<?php echo (int)($venta["id"] ?? 0); ?>">
                   <div class="tm-report-card-head">
                     <div>
                       <span class="tm-report-code"><i class="fa fa-hashtag"></i> <?php echo tmE($venta["codigo"] ?? "-"); ?></span>
@@ -1235,30 +1347,74 @@ $serviciosPorTipo = tmReporteRows($dbReportes,
                     </div>
                     <div class="tm-report-info-grid">
                       <div class="tm-report-info"><b>Vendedor</b><?php echo tmE($venta["vendedor"] ?? "-"); ?></div>
-                      <div class="tm-report-info"><b>Cajero</b><?php echo tmE($venta["cajero"] ?? "-"); ?></div>
-                      <div class="tm-report-info"><b>Creacion</b><?php echo tmFechaReporte($venta["fecha"] ?? ""); ?></div>
                       <div class="tm-report-info"><b>Cobro</b><?php echo tmFechaReporte($venta["fecha_reporte"] ?? ""); ?></div>
                     </div>
                     <div class="tm-report-finance-strip">
                       <div class="tm-report-info"><b>Capital compra</b><?php echo tmMoney($finanzaVenta["capital"] ?? 0); ?></div>
-                      <div class="tm-report-info"><b>Impuesto 16%</b><?php echo tmMoney($finanzaVenta["impuesto"] ?? 0); ?></div>
-                      <div class="tm-report-info"><b>Ganancia bruta</b><?php echo tmMoney($finanzaVenta["ganancia_bruta"] ?? 0); ?></div>
                       <div class="tm-report-info"><b>Ganancia liquida</b><?php echo tmMoney($finanzaVenta["ganancia_liquida"] ?? 0); ?></div>
                     </div>
-                    <?php if(!empty($finanzaVenta["items"])): ?>
-                      <div class="tm-report-product-list">
-                        <?php foreach($finanzaVenta["items"] as $itemFinanciero): ?>
-                          <div class="tm-report-product-row">
-                            <div><b><?php echo tmE($itemFinanciero["producto"] ?? "Producto"); ?></b><span>Cant: <?php echo (int)($itemFinanciero["cantidad"] ?? 0); ?></span></div>
-                            <div><span>Compra</span><?php echo tmMoney($itemFinanciero["precio_compra"] ?? 0); ?></div>
-                            <div><span>Venta</span><?php echo tmMoney($itemFinanciero["precio_venta"] ?? 0); ?></div>
-                            <div><span>Total</span><?php echo tmMoney($itemFinanciero["total"] ?? 0); ?></div>
-                          </div>
-                        <?php endforeach; ?>
-                      </div>
-                    <?php endif; ?>
+                    <div class="tm-report-card-action">
+                      <span><i class="fa fa-search-plus"></i> Ver detalle completo</span>
+                      <span><?php echo count($finanzaVenta["items"] ?? array()); ?> producto(s)</span>
+                    </div>
                   </div>
                 </article>
+
+                <div class="modal fade tm-report-modal" id="modalReporteVenta<?php echo (int)($venta["id"] ?? 0); ?>" tabindex="-1" role="dialog">
+                  <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title"><i class="fa fa-line-chart"></i> Reporte de venta <?php echo tmE($venta["codigo"] ?? "-"); ?></h4>
+                        <small><?php echo tmE($venta["cliente"] ?? "Sin cliente"); ?> · Cobro: <?php echo tmFechaReporte($venta["fecha_reporte"] ?? ""); ?></small>
+                      </div>
+                      <div class="modal-body">
+                        <div class="tm-report-modal-grid">
+                          <div class="tm-report-modal-box"><b>Total vendido</b><?php echo tmMoney($venta["total"] ?? 0); ?></div>
+                          <div class="tm-report-modal-box"><b>Capital compra</b><?php echo tmMoney($finanzaVenta["capital"] ?? 0); ?></div>
+                          <div class="tm-report-modal-box"><b>Impuesto 16%</b><?php echo tmMoney($finanzaVenta["impuesto"] ?? 0); ?></div>
+                          <div class="tm-report-modal-box"><b>Ganancia liquida</b><?php echo tmMoney($finanzaVenta["ganancia_liquida"] ?? 0); ?></div>
+                          <div class="tm-report-modal-box"><b>Vendedor</b><?php echo tmE($venta["vendedor"] ?? "-"); ?></div>
+                          <div class="tm-report-modal-box"><b>Cajero</b><?php echo tmE($venta["cajero"] ?? "-"); ?></div>
+                          <div class="tm-report-modal-box"><b>Creacion</b><?php echo tmFechaReporte($venta["fecha"] ?? ""); ?></div>
+                          <div class="tm-report-modal-box"><b>Ganancia bruta</b><?php echo tmMoney($finanzaVenta["ganancia_bruta"] ?? 0); ?></div>
+                        </div>
+                        <div class="table-responsive">
+                          <table class="tm-report-modal-table">
+                            <thead>
+                              <tr>
+                                <th>Producto</th>
+                                <th>Cant.</th>
+                                <th>Compra U.</th>
+                                <th>Venta U.</th>
+                                <th>Capital</th>
+                                <th>Total</th>
+                                <th>Bruta</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <?php foreach(($finanzaVenta["items"] ?? array()) as $itemFinanciero): ?>
+                                <tr>
+                                  <td><?php echo tmE($itemFinanciero["producto"] ?? "Producto"); ?></td>
+                                  <td><?php echo (int)($itemFinanciero["cantidad"] ?? 0); ?></td>
+                                  <td><?php echo tmMoney($itemFinanciero["precio_compra"] ?? 0); ?></td>
+                                  <td><?php echo tmMoney($itemFinanciero["precio_venta"] ?? 0); ?></td>
+                                  <td><?php echo tmMoney($itemFinanciero["capital"] ?? 0); ?></td>
+                                  <td><?php echo tmMoney($itemFinanciero["total"] ?? 0); ?></td>
+                                  <td><?php echo tmMoney($itemFinanciero["ganancia_bruta"] ?? 0); ?></td>
+                                </tr>
+                              <?php endforeach; ?>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Cerrar</button>
+                        <a class="btn btn-primary" target="_blank" href="<?php echo tmReportePdf("ventas", $fechaInicialReporte, $fechaFinalReporte, array("idVenta" => (int)($venta["id"] ?? 0))); ?>"><i class="fa fa-print"></i> Imprimir reporte de esta venta</a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               <?php endforeach; ?>
             </div>
           </div>
