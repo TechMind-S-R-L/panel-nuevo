@@ -54,6 +54,30 @@ function tmClienteIniciales($nombre){
   return htmlspecialchars($iniciales ?: "CL", ENT_QUOTES, "UTF-8");
 }
 
+function tmClienteCrmEstadoTexto($estado){
+  $mapa = array(
+    "nuevo" => "Nuevo",
+    "contactado" => "Contactado",
+    "cotizando" => "Cotizando",
+    "cliente_activo" => "Cliente activo",
+    "seguimiento" => "Seguimiento",
+    "inactivo" => "Inactivo"
+  );
+  return $mapa[$estado ?: "nuevo"] ?? "Nuevo";
+}
+
+function tmClienteCrmClase($estado){
+  $mapa = array(
+    "nuevo" => "crm-new",
+    "contactado" => "crm-contact",
+    "cotizando" => "crm-quote",
+    "cliente_activo" => "crm-active",
+    "seguimiento" => "crm-follow",
+    "inactivo" => "crm-off"
+  );
+  return $mapa[$estado ?: "nuevo"] ?? "crm-new";
+}
+
 ?>
 
 <div class="content-wrapper clientes-page">
@@ -248,6 +272,25 @@ function tmClienteIniciales($nombre){
       padding:5px 8px;
       border-radius:999px;
     }
+    .cliente-crm-pill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:5px;
+      min-height:24px;
+      padding:5px 9px;
+      border-radius:999px;
+      color:#fff;
+      font-size:11px;
+      font-weight:900;
+      line-height:1.1;
+    }
+    .cliente-crm-pill.crm-new{background:#64748b;}
+    .cliente-crm-pill.crm-contact{background:#0ea5e9;}
+    .cliente-crm-pill.crm-quote{background:#f59e0b;}
+    .cliente-crm-pill.crm-active{background:#10b981;}
+    .cliente-crm-pill.crm-follow{background:#6366f1;}
+    .cliente-crm-pill.crm-off{background:#94a3b8;}
     .cliente-actions{
       width:100%;
       display:grid;
@@ -455,6 +498,31 @@ function tmClienteIniciales($nombre){
       flex-wrap:wrap;
       justify-content:flex-end;
     }
+    .cliente-crm-panel{
+      border:1px solid #dce8f1;
+      border-radius:12px;
+      background:#fff;
+      padding:12px;
+      margin-top:10px;
+    }
+    .cliente-crm-panel h4{
+      margin:0 0 10px;
+      color:#263845;
+      font-size:15px;
+      font-weight:900;
+    }
+    .cliente-crm-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr;
+      gap:10px;
+    }
+    .cliente-crm-grid .full{grid-column:1 / -1;}
+    .cliente-crm-grid label{
+      color:#60717f;
+      font-size:11px;
+      font-weight:900;
+      text-transform:uppercase;
+    }
     .cliente-detail-actions:before{
       content:"Acciones disponibles";
       margin-right:auto;
@@ -546,6 +614,7 @@ function tmClienteIniciales($nombre){
                 <div class="cliente-card-item">
                   <span>Compras</span>
                   <strong>Bs <?php echo number_format((float)($value["compras"] ?? 0), 2); ?></strong>
+                  <p><?php echo (int)($value["cantidad_ventas"] ?? 0); ?> venta(s)</p>
                 </div>
                 <div class="cliente-card-item cliente-card-full">
                   <span>Contacto</span>
@@ -560,6 +629,9 @@ function tmClienteIniciales($nombre){
 
               <div class="cliente-card-footer">
                 <div>
+                  <span class="cliente-crm-pill <?php echo tmClienteCrmClase($value["estado_crm"] ?? "nuevo"); ?>">
+                    <i class="fa fa-circle"></i> <?php echo tmClienteTexto(tmClienteCrmEstadoTexto($value["estado_crm"] ?? "nuevo")); ?>
+                  </span>
                   <?php if(!empty($value["password_web"])): ?>
                     <span class="label label-success">Web configurada</span>
                   <?php else: ?>
@@ -772,6 +844,7 @@ function tmClienteIniciales($nombre){
 </div>
 
 <?php
+  ControladorClientes::ctrGuardarSeguimientoCliente();
   $eliminarCliente = new ControladorClientes();
   $eliminarCliente -> ctrEliminarCliente();
 ?>

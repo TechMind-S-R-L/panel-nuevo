@@ -60,6 +60,22 @@ function inicialesCliente(nombre){
 	return iniciales || "CL";
 }
 
+function estadoCrmTexto(estado){
+	var mapa = {
+		nuevo: "Nuevo",
+		contactado: "Contactado",
+		cotizando: "Cotizando",
+		cliente_activo: "Cliente activo",
+		seguimiento: "Seguimiento",
+		inactivo: "Inactivo"
+	};
+	return mapa[estado || "nuevo"] || "Nuevo";
+}
+
+function selectedCrm(actual, valor){
+	return String(actual || "") === valor ? " selected" : "";
+}
+
 function abrirDetalleCliente(idCliente){
 	cargarCliente(idCliente, function(cliente){
 		var claveWeb = cliente.password_web
@@ -80,7 +96,7 @@ function abrirDetalleCliente(idCliente){
 				+ claveWeb
 			+ '</div>'
 			+ '<div class="cliente-detail-summary">'
-				+ '<div class="cliente-summary-card"><span>Total compras</span><strong>Bs '+Number(cliente.compras || 0).toFixed(2)+'</strong><p>Acumulado comercial</p></div>'
+				+ '<div class="cliente-summary-card"><span>Total compras</span><strong>Bs '+Number(cliente.compras || 0).toFixed(2)+'</strong><p>'+Number(cliente.cantidad_ventas || 0)+' venta(s) cobradas</p></div>'
 				+ '<div class="cliente-summary-card"><span>Ultima compra</span><p>'+escapeCliente(cliente.ultima_compra)+'</p></div>'
 				+ '<div class="cliente-summary-card"><span>Registro</span><p>'+escapeCliente(cliente.fecha)+'</p></div>'
 			+ '</div>'
@@ -93,6 +109,41 @@ function abrirDetalleCliente(idCliente){
 				+ '<div class="cliente-detail-box full"><span>Direccion</span><p>'+escapeCliente(cliente.direccion)+'</p></div>'
 			+ '</div>'
 			+ '</div>'
+			+ '<form method="post" class="cliente-crm-panel">'
+				+ '<input type="hidden" name="idClienteCrm" value="'+escapeCliente(cliente.id)+'">'
+				+ '<h4><i class="fa fa-handshake-o"></i> Seguimiento CRM <small class="text-muted">Estado actual: '+escapeCliente(estadoCrmTexto(cliente.estado_crm))+'</small></h4>'
+				+ '<div class="cliente-crm-grid">'
+					+ '<div class="form-group">'
+						+ '<label>Estado comercial</label>'
+						+ '<select class="form-control" name="estadoClienteCrm">'
+							+ '<option value="nuevo"'+selectedCrm(cliente.estado_crm, "nuevo")+'>Nuevo</option>'
+							+ '<option value="contactado"'+selectedCrm(cliente.estado_crm, "contactado")+'>Contactado</option>'
+							+ '<option value="cotizando"'+selectedCrm(cliente.estado_crm, "cotizando")+'>Cotizando</option>'
+							+ '<option value="cliente_activo"'+selectedCrm(cliente.estado_crm, "cliente_activo")+'>Cliente activo</option>'
+							+ '<option value="seguimiento"'+selectedCrm(cliente.estado_crm, "seguimiento")+'>Seguimiento</option>'
+							+ '<option value="inactivo"'+selectedCrm(cliente.estado_crm, "inactivo")+'>Inactivo</option>'
+						+ '</select>'
+					+ '</div>'
+					+ '<div class="form-group">'
+						+ '<label>Prioridad</label>'
+						+ '<select class="form-control" name="prioridadClienteCrm">'
+							+ '<option value="baja"'+selectedCrm(cliente.prioridad_crm, "baja")+'>Baja</option>'
+							+ '<option value="media"'+selectedCrm(cliente.prioridad_crm, "media")+'>Media</option>'
+							+ '<option value="alta"'+selectedCrm(cliente.prioridad_crm, "alta")+'>Alta</option>'
+							+ '<option value="urgente"'+selectedCrm(cliente.prioridad_crm, "urgente")+'>Urgente</option>'
+						+ '</select>'
+					+ '</div>'
+					+ '<div class="form-group">'
+						+ '<label>Proxima accion</label>'
+						+ '<input type="date" class="form-control" name="proximaAccionClienteCrm" value="'+escapeCliente(cliente.proxima_accion_crm || "")+'">'
+					+ '</div>'
+					+ '<div class="form-group full">'
+						+ '<label>Nota de seguimiento</label>'
+						+ '<textarea class="form-control" name="notaClienteCrm" rows="3" placeholder="Ej. Llamar para ofrecer mantenimiento, renovar cotizacion o confirmar entrega.">'+escapeCliente(cliente.nota_crm || "")+'</textarea>'
+					+ '</div>'
+				+ '</div>'
+				+ '<button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Guardar seguimiento</button>'
+			+ '</form>'
 			+ '<div class="cliente-detail-actions">'
 				+ '<button type="button" class="btn btn-warning btnEditarCliente" title="Editar cliente" idCliente="'+escapeCliente(cliente.id)+'"><i class="fa fa-pencil"></i> Editar</button>'
 				+ '<button type="button" class="btn btn-primary btnPasswordWebCliente" title="Generar o cambiar clave web" idCliente="'+escapeCliente(cliente.id)+'" cliente="'+escapeCliente(cliente.nombre)+'"><i class="fa fa-key"></i> Clave web</button>'

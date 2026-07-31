@@ -194,6 +194,66 @@ class ControladorClientes{
 		}
 	}
 
+	static public function ctrGuardarSeguimientoCliente(){
+		if(!isset($_POST["idClienteCrm"])){
+			return;
+		}
+
+		if(($_SESSION["perfil"] ?? "") == "Especial"){
+			echo '<script>window.location = "clientes";</script>';
+			return;
+		}
+
+		$estadosPermitidos = array("nuevo", "contactado", "cotizando", "cliente_activo", "seguimiento", "inactivo");
+		$prioridadesPermitidas = array("baja", "media", "alta", "urgente");
+		$estado = $_POST["estadoClienteCrm"] ?? "nuevo";
+		$prioridad = $_POST["prioridadClienteCrm"] ?? "media";
+
+		if(!in_array($estado, $estadosPermitidos, true)){
+			$estado = "nuevo";
+		}
+		if(!in_array($prioridad, $prioridadesPermitidas, true)){
+			$prioridad = "media";
+		}
+
+		$datos = array(
+			"id_cliente" => (int)$_POST["idClienteCrm"],
+			"estado" => $estado,
+			"prioridad" => $prioridad,
+			"proxima_accion" => $_POST["proximaAccionClienteCrm"] ?? "",
+			"nota" => trim((string)($_POST["notaClienteCrm"] ?? "")),
+			"id_usuario" => (int)($_SESSION["id"] ?? 0)
+		);
+
+		$respuesta = ModeloClientes::mdlGuardarSeguimientoCliente($datos);
+
+		if($respuesta == "ok"){
+			if(class_exists("ControladorLogs")){
+				ControladorLogs::ctrRegistrarLog("crm", "clientes", "Seguimiento CRM actualizado para cliente ".$datos["id_cliente"]);
+			}
+
+			echo '<script>
+				swal({
+					type: "success",
+					title: "Seguimiento guardado",
+					text: "El estado CRM del cliente fue actualizado correctamente.",
+					confirmButtonText: "Cerrar"
+				}).then(function(){
+					window.location = "clientes";
+				});
+			</script>';
+		}else{
+			echo '<script>
+				swal({
+					type: "error",
+					title: "No se pudo guardar el seguimiento",
+					text: "Revise permisos de base de datos para la tabla cliente_crm.",
+					confirmButtonText: "Cerrar"
+				});
+			</script>';
+		}
+	}
+
 	static public function ctrEliminarCliente(){
 		if(isset($_GET["idCliente"])){
 			if(($_SESSION["perfil"] ?? "") != "Administrador"){

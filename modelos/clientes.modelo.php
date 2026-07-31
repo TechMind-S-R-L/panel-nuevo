@@ -45,6 +45,29 @@ class ModeloClientes{
 		return sprintf("%04d-%02d-%02d", $anio, $mes, $dia);
 	}
 
+	static private function mdlAsegurarTablaCrm(){
+		try{
+			$conexion = Conexion::conectar();
+			$conexion->exec(
+				"CREATE TABLE IF NOT EXISTS cliente_crm (
+					id INT AUTO_INCREMENT PRIMARY KEY,
+					id_cliente INT NOT NULL,
+					estado VARCHAR(40) NOT NULL DEFAULT 'nuevo',
+					prioridad VARCHAR(20) NOT NULL DEFAULT 'media',
+					proxima_accion DATE NULL,
+					nota TEXT NULL,
+					id_usuario INT NULL,
+					fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+					UNIQUE KEY uk_cliente_crm_cliente (id_cliente),
+					KEY idx_cliente_crm_estado (estado),
+					KEY idx_cliente_crm_proxima (proxima_accion)
+				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+			);
+		}catch(Exception $e){
+			error_log("TechMind clientes CRM: no se pudo asegurar tabla - ".$e->getMessage());
+		}
+	}
+
 	/*=============================================
 	CREAR CLIENTE
 	=============================================*/
@@ -106,10 +129,30 @@ class ModeloClientes{
 	=============================================*/
 
 	static public function mdlMostrarClientes($tabla, $item, $valor){
+		self::mdlAsegurarTablaCrm();
+		$select = "SELECT c.*,
+				          COALESCE(v.total_compras, 0) AS compras,
+				          COALESCE(v.cantidad_ventas, 0) AS cantidad_ventas,
+				          COALESCE(v.ultima_compra, c.ultima_compra) AS ultima_compra,
+				          crm.estado AS estado_crm,
+				          crm.prioridad AS prioridad_crm,
+				          crm.proxima_accion AS proxima_accion_crm,
+				          crm.nota AS nota_crm,
+				          crm.fecha_actualizacion AS fecha_crm
+				   FROM $tabla c
+				   LEFT JOIN (
+				   	 SELECT id_cliente,
+				   	        SUM(CASE WHEN estado_pago = 'aprobado' THEN total ELSE 0 END) AS total_compras,
+				   	        SUM(CASE WHEN estado_pago = 'aprobado' THEN 1 ELSE 0 END) AS cantidad_ventas,
+				   	        MAX(CASE WHEN estado_pago = 'aprobado' THEN COALESCE(fecha_pago, fecha) ELSE NULL END) AS ultima_compra
+				   	 FROM ventas
+				   	 GROUP BY id_cliente
+				   ) v ON v.id_cliente = c.id
+				   LEFT JOIN cliente_crm crm ON crm.id_cliente = c.id";
 
 		if($item != null){
 
-			$stmt = Conexion::conectar()->prepare("SELECT * FROM $tabla WHERE $item = :$item");
+			$stmt = Conexion::conectar()->prepare($select." WHERE c.$item = :$item LIMIT 1");
 
 			$stmt -> bindParam(":".$item, $valor, PDO::PARAM_STR);
 
@@ -119,7 +162,7 @@ class ModeloClientes{
 
 		}else{
 
-			$stmt = Conexion::conectar()->prepare("SELECT * FROM $tabla");
+			$stmt = Conexion::conectar()->prepare($select." ORDER BY c.fecha DESC, c.id DESC");
 
 			$stmt -> execute();
 
@@ -224,6 +267,35 @@ class ModeloClientes{
 
 		$stmt = null;
 
+	}
+
+	static public function mdlGuardarSeguimientoCliente($datos){
+		self::mdlAsegurarTablaCrm();
+
+		$stmt = Conexion::conectar()->prepare(
+			"INSERT INTO cliente_crm (id_cliente, estado, prioridad, proxima_accion, nota, id_usuario)
+			 VALUES (:id_cliente, :estado, :prioridad, :proxima_accion, :nota, :id_usuario)
+			 ON DUPLICATE KEY UPDATE
+			 estado = VALUES(estado),
+			 prioridad = VALUES(prioridad),
+			 proxima_accion = VALUES(proxima_accion),
+			 nota = VALUES(nota),
+			 id_usuario = VALUES(id_usuario),
+			 fecha_actualizacion = NOW()"
+		);
+
+		$stmt->bindParam(":id_cliente", $datos["id_cliente"], PDO::PARAM_INT);
+		$stmt->bindParam(":estado", $datos["estado"], PDO::PARAM_STR);
+		$stmt->bindParam(":prioridad", $datos["prioridad"], PDO::PARAM_STR);
+		if(empty($datos["proxima_accion"])){
+			$stmt->bindValue(":proxima_accion", null, PDO::PARAM_NULL);
+		}else{
+			$stmt->bindParam(":proxima_accion", $datos["proxima_accion"], PDO::PARAM_STR);
+		}
+		$stmt->bindParam(":nota", $datos["nota"], PDO::PARAM_STR);
+		$stmt->bindParam(":id_usuario", $datos["id_usuario"], PDO::PARAM_INT);
+
+		return $stmt->execute() ? "ok" : "error";
 	}
 
 	static public function mdlActualizarPasswordWeb($tabla, $idCliente, $passwordWeb){
