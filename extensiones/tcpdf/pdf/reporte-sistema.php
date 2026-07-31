@@ -60,6 +60,107 @@ function reporteOrigenCaja($origen) {
 	return $nombres[$origen] ?? ucwords(str_replace("_", " ", (string)$origen));
 }
 
+function reporteFinanzasVentas($db, $ventas) {
+	$idsProductos = array();
+	foreach($ventas as $venta) {
+		$productos = json_decode($venta["productos"] ?? "[]", true);
+		if(!is_array($productos)) {
+			continue;
+		}
+		foreach($productos as $producto) {
+			$idProducto = (int)($producto["id"] ?? 0);
+			if($idProducto > 0) {
+				$idsProductos[$idProducto] = $idProducto;
+			}
+		}
+	}
+
+	$productosBase = array();
+	if(count($idsProductos) > 0) {
+		$placeholders = array();
+		$paramsProductos = array();
+		$i = 0;
+		foreach($idsProductos as $idProducto) {
+			$key = ":producto_".$i++;
+			$placeholders[] = $key;
+			$paramsProductos[$key] = $idProducto;
+		}
+		$rowsProductos = reporteRows($db, "SELECT id, descripcion, precio_compra, precio_venta FROM productos WHERE id IN (".implode(",", $placeholders).")", $paramsProductos);
+		foreach($rowsProductos as $rowProducto) {
+			$productosBase[(int)$rowProducto["id"]] = $rowProducto;
+		}
+	}
+
+	$resultado = array(
+		"ventas" => array(),
+		"items" => array(),
+		"totales" => array("capital" => 0, "impuesto" => 0, "ganancia_bruta" => 0, "ganancia_liquida" => 0)
+	);
+
+	foreach($ventas as $venta) {
+		$idVenta = (int)($venta["id"] ?? 0);
+		$productos = json_decode($venta["productos"] ?? "[]", true);
+		if(!is_array($productos)) {
+			$productos = array();
+		}
+
+		$ventaTotal = (float)($venta["total"] ?? 0);
+		$detalleItems = array();
+		$capital = 0;
+		$subtotalProductos = 0;
+
+		foreach($productos as $producto) {
+			$cantidad = max(1, (int)($producto["cantidad"] ?? 1));
+			$idProducto = (int)($producto["id"] ?? 0);
+			$base = $productosBase[$idProducto] ?? array();
+			$precioVentaUnitario = (float)($producto["precio"] ?? $producto["precio_venta"] ?? $base["precio_venta"] ?? 0);
+			$totalLinea = (float)($producto["total"] ?? ($precioVentaUnitario * $cantidad));
+			if($precioVentaUnitario <= 0 && $cantidad > 0) {
+				$precioVentaUnitario = $totalLinea / $cantidad;
+			}
+			$precioCompraUnitario = (float)($producto["precio_compra"] ?? $producto["costo_compra"] ?? $base["precio_compra"] ?? 0);
+			$capitalLinea = $precioCompraUnitario * $cantidad;
+			$gananciaBrutaLinea = $totalLinea - $capitalLinea;
+
+			$item = array(
+				"venta" => $venta["codigo"] ?? ("#".$idVenta),
+				"producto" => $producto["descripcion"] ?? ($base["descripcion"] ?? "Producto"),
+				"cantidad" => $cantidad,
+				"precio_compra" => $precioCompraUnitario,
+				"precio_venta" => $precioVentaUnitario,
+				"capital" => $capitalLinea,
+				"total" => $totalLinea,
+				"ganancia_bruta" => $gananciaBrutaLinea
+			);
+
+			$detalleItems[] = $item;
+			$resultado["items"][] = $item;
+			$capital += $capitalLinea;
+			$subtotalProductos += $totalLinea;
+		}
+
+		$baseImpuesto = $ventaTotal > 0 ? $ventaTotal : $subtotalProductos;
+		$impuesto = $baseImpuesto * 0.16;
+		$gananciaBruta = $baseImpuesto - $capital;
+		$gananciaLiquida = $gananciaBruta - $impuesto;
+
+		$resultado["ventas"][$idVenta] = array(
+			"items" => $detalleItems,
+			"capital" => $capital,
+			"impuesto" => $impuesto,
+			"ganancia_bruta" => $gananciaBruta,
+			"ganancia_liquida" => $gananciaLiquida
+		);
+
+		$resultado["totales"]["capital"] += $capital;
+		$resultado["totales"]["impuesto"] += $impuesto;
+		$resultado["totales"]["ganancia_bruta"] += $gananciaBruta;
+		$resultado["totales"]["ganancia_liquida"] += $gananciaLiquida;
+	}
+
+	return $resultado;
+}
+
 function reporteHeader($pdf, $titulo, $fechaInicial, $fechaFinal) {
 	$pdf->SetAlpha(0.08);
 	RotatedTextReporteSistema($pdf, 28, 180, 'REPORTE', 45);
@@ -367,6 +468,11 @@ $stock = reporteRows($db,
 );
 
 $totalVentasProductos = array_sum(array_map(function($row){ return (float)($row["total"] ?? 0); }, $ventasCobradas));
+$finanzasVentas = reporteFinanzasVentas($db, $ventasCobradas);
+$totalCapitalVentas = (float)($finanzasVentas["totales"]["capital"] ?? 0);
+$totalImpuestosVentas = (float)($finanzasVentas["totales"]["impuesto"] ?? 0);
+$totalGananciaBrutaVentas = (float)($finanzasVentas["totales"]["ganancia_bruta"] ?? 0);
+$totalGananciaLiquidaVentas = (float)($finanzasVentas["totales"]["ganancia_liquida"] ?? 0);
 $totalServicios = array_sum(array_map(function($row){ return (float)($row["total"] ?? 0); }, $serviciosCobrados));
 $totalVentas = $totalVentasProductos + $totalServicios;
 $totalCompras = array_sum(array_map(function($row){ return (float)($row["total"] ?? 0); }, $compras));
@@ -430,19 +536,50 @@ if($tipo == "general") {
 
 if($tipo == "general" || $tipo == "ventas") {
 	reporteSectionTitle($pdf, "VENTAS DE PRODUCTOS COBRADAS");
+	reporteSummaryCards($pdf, array(
+		"Total vendido" => reporteMoney($totalVentasProductos),
+		"Capital de compra" => reporteMoney($totalCapitalVentas),
+		"Impuestos 16%" => reporteMoney($totalImpuestosVentas),
+		"Ganancia liquida" => reporteMoney($totalGananciaLiquidaVentas)
+	));
 	$rows = array();
 	foreach($ventasCobradas as $venta) {
+		$finanzaVenta = $finanzasVentas["ventas"][(int)($venta["id"] ?? 0)] ?? array("capital" => 0, "impuesto" => 0, "ganancia_liquida" => 0);
 		$rows[] = array(
 			reporteText($venta["codigo"]),
 			reporteText($venta["cliente"] ?? "-"),
-			reporteText($venta["vendedor"] ?? "-"),
-			reporteText($venta["cajero"] ?? "-"),
 			reporteMoney($venta["total"]),
+			reporteMoney($finanzaVenta["capital"] ?? 0),
+			reporteMoney($finanzaVenta["impuesto"] ?? 0),
+			reporteMoney($finanzaVenta["ganancia_liquida"] ?? 0),
 			reporteText(reporteFechaHoraCorta($venta["fecha_reporte"] ?? "-"))
 		);
 	}
-	reporteHtmlTable($pdf, array("Codigo", "Cliente", "Vendedor", "Cajero", "Total", "Fecha cobro"), $rows, array(22, 50, 28, 28, 28, 34));
-	reporteTotales($pdf, array("Total ventas productos" => reporteMoney($totalVentasProductos), "Cantidad de ventas cobradas" => count($ventasCobradas)));
+	reporteHtmlTable($pdf, array("Codigo", "Cliente", "Vendido", "Capital", "Imp. 16%", "Gan. liquida", "Fecha cobro"), $rows, array(22, 43, 24, 24, 24, 28, 25));
+
+	reporteSectionTitle($pdf, "DETALLE DE PRODUCTOS VENDIDOS");
+	$rowsDetalleProductos = array();
+	foreach($finanzasVentas["items"] as $itemVenta) {
+		$rowsDetalleProductos[] = array(
+			reporteText($itemVenta["venta"] ?? "-"),
+			reporteText($itemVenta["producto"] ?? "Producto"),
+			reporteText($itemVenta["cantidad"] ?? 0),
+			reporteMoney($itemVenta["precio_compra"] ?? 0),
+			reporteMoney($itemVenta["precio_venta"] ?? 0),
+			reporteMoney($itemVenta["capital"] ?? 0),
+			reporteMoney($itemVenta["total"] ?? 0),
+			reporteMoney($itemVenta["ganancia_bruta"] ?? 0)
+		);
+	}
+	reporteHtmlTable($pdf, array("Venta", "Producto", "Cant.", "Compra U.", "Venta U.", "Capital", "Total", "Bruta"), $rowsDetalleProductos, array(18, 56, 12, 18, 18, 22, 22, 24));
+	reporteTotales($pdf, array(
+		"Total ventas productos" => reporteMoney($totalVentasProductos),
+		"Capital de compra" => reporteMoney($totalCapitalVentas),
+		"Impuestos 16%" => reporteMoney($totalImpuestosVentas),
+		"Ganancia bruta" => reporteMoney($totalGananciaBrutaVentas),
+		"Ganancia liquida" => reporteMoney($totalGananciaLiquidaVentas),
+		"Cantidad de ventas cobradas" => count($ventasCobradas)
+	));
 }
 
 if($tipo == "general" || $tipo == "servicios") {

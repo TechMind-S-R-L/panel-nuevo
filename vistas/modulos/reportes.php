@@ -117,6 +117,107 @@ function tmReporteOrigenCaja($origen){
   return $nombres[$origen] ?? ucwords(str_replace("_", " ", (string)$origen));
 }
 
+function tmReporteFinanzasVentas($db, $ventas){
+  $idsProductos = array();
+  foreach($ventas as $venta){
+    $productos = json_decode($venta["productos"] ?? "[]", true);
+    if(!is_array($productos)){
+      continue;
+    }
+    foreach($productos as $producto){
+      $idProducto = (int)($producto["id"] ?? 0);
+      if($idProducto > 0){
+        $idsProductos[$idProducto] = $idProducto;
+      }
+    }
+  }
+
+  $productosBase = array();
+  if(count($idsProductos) > 0){
+    $placeholders = array();
+    $paramsProductos = array();
+    $i = 0;
+    foreach($idsProductos as $idProducto){
+      $key = ":producto_".$i++;
+      $placeholders[] = $key;
+      $paramsProductos[$key] = $idProducto;
+    }
+    $rowsProductos = tmReporteRows($db, "SELECT id, descripcion, precio_compra, precio_venta FROM productos WHERE id IN (".implode(",", $placeholders).")", $paramsProductos);
+    foreach($rowsProductos as $rowProducto){
+      $productosBase[(int)$rowProducto["id"]] = $rowProducto;
+    }
+  }
+
+  $resultado = array(
+    "ventas" => array(),
+    "items" => array(),
+    "totales" => array("capital" => 0, "impuesto" => 0, "ganancia_bruta" => 0, "ganancia_liquida" => 0)
+  );
+
+  foreach($ventas as $venta){
+    $idVenta = (int)($venta["id"] ?? 0);
+    $productos = json_decode($venta["productos"] ?? "[]", true);
+    if(!is_array($productos)){
+      $productos = array();
+    }
+
+    $ventaTotal = (float)($venta["total"] ?? 0);
+    $detalleItems = array();
+    $capital = 0;
+    $subtotalProductos = 0;
+
+    foreach($productos as $producto){
+      $cantidad = max(1, (int)($producto["cantidad"] ?? 1));
+      $idProducto = (int)($producto["id"] ?? 0);
+      $base = $productosBase[$idProducto] ?? array();
+      $precioVentaUnitario = (float)($producto["precio"] ?? $producto["precio_venta"] ?? $base["precio_venta"] ?? 0);
+      $totalLinea = (float)($producto["total"] ?? ($precioVentaUnitario * $cantidad));
+      if($precioVentaUnitario <= 0 && $cantidad > 0){
+        $precioVentaUnitario = $totalLinea / $cantidad;
+      }
+      $precioCompraUnitario = (float)($producto["precio_compra"] ?? $producto["costo_compra"] ?? $base["precio_compra"] ?? 0);
+      $capitalLinea = $precioCompraUnitario * $cantidad;
+      $gananciaBrutaLinea = $totalLinea - $capitalLinea;
+
+      $item = array(
+        "venta" => $venta["codigo"] ?? ("#".$idVenta),
+        "producto" => $producto["descripcion"] ?? ($base["descripcion"] ?? "Producto"),
+        "cantidad" => $cantidad,
+        "precio_compra" => $precioCompraUnitario,
+        "precio_venta" => $precioVentaUnitario,
+        "capital" => $capitalLinea,
+        "total" => $totalLinea,
+        "ganancia_bruta" => $gananciaBrutaLinea
+      );
+
+      $detalleItems[] = $item;
+      $resultado["items"][] = $item;
+      $capital += $capitalLinea;
+      $subtotalProductos += $totalLinea;
+    }
+
+    $baseImpuesto = $ventaTotal > 0 ? $ventaTotal : $subtotalProductos;
+    $impuesto = $baseImpuesto * 0.16;
+    $gananciaBruta = $baseImpuesto - $capital;
+    $gananciaLiquida = $gananciaBruta - $impuesto;
+
+    $resultado["ventas"][$idVenta] = array(
+      "items" => $detalleItems,
+      "capital" => $capital,
+      "impuesto" => $impuesto,
+      "ganancia_bruta" => $gananciaBruta,
+      "ganancia_liquida" => $gananciaLiquida
+    );
+
+    $resultado["totales"]["capital"] += $capital;
+    $resultado["totales"]["impuesto"] += $impuesto;
+    $resultado["totales"]["ganancia_bruta"] += $gananciaBruta;
+    $resultado["totales"]["ganancia_liquida"] += $gananciaLiquida;
+  }
+
+  return $resultado;
+}
+
 $ventasProductos = tmReporteRows($dbReportes,
   "SELECT v.*, c.nombre AS cliente, uv.nombre AS vendedor, uc.nombre AS cajero
    FROM ventas v
@@ -212,6 +313,11 @@ $stockCritico = tmReporteRows($dbReportes,
 );
 
 $ventasProductosTotal = array_sum(array_map(function($venta){ return (float)($venta["total"] ?? 0); }, $ventasProductosCobradas));
+$ventasProductosFinanzas = tmReporteFinanzasVentas($dbReportes, $ventasProductosCobradas);
+$ventasCapitalCompra = (float)($ventasProductosFinanzas["totales"]["capital"] ?? 0);
+$ventasImpuesto16 = (float)($ventasProductosFinanzas["totales"]["impuesto"] ?? 0);
+$ventasGananciaBruta = (float)($ventasProductosFinanzas["totales"]["ganancia_bruta"] ?? 0);
+$ventasGananciaLiquida = (float)($ventasProductosFinanzas["totales"]["ganancia_liquida"] ?? 0);
 $serviciosTotal = array_sum(array_map(function($servicio){ return (float)($servicio["total"] ?? 0); }, $serviciosCobrados));
 $totalVentasGeneral = $ventasProductosTotal + $serviciosTotal;
 $comprasTotal = array_sum(array_map(function($compra){ return (float)($compra["total"] ?? 0); }, $compras));
@@ -803,6 +909,48 @@ $serviciosPorTipo = tmReporteRows($dbReportes,
     text-transform:uppercase;
   }
 
+  .tm-report-finance-strip{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:8px;
+    margin:10px 0 0;
+  }
+
+  .tm-report-product-list{
+    margin-top:10px;
+    border:1px dashed #c9dff4;
+    border-radius:14px;
+    background:rgba(255,255,255,.68);
+    overflow:hidden;
+  }
+
+  .tm-report-product-row{
+    display:grid;
+    grid-template-columns:minmax(0,1.4fr) 70px 90px 90px;
+    gap:8px;
+    padding:8px 10px;
+    border-bottom:1px solid #e8f1fb;
+    font-size:11px;
+    color:#324961;
+    align-items:center;
+  }
+
+  .tm-report-product-row:last-child{
+    border-bottom:0;
+  }
+
+  .tm-report-product-row b{
+    display:block;
+    color:#193449;
+    font-size:12px;
+    overflow-wrap:anywhere;
+  }
+
+  .tm-report-product-row span{
+    color:#6d819b;
+    font-weight:800;
+  }
+
   .tm-report-badges{
     display:flex;
     flex-wrap:wrap;
@@ -963,6 +1111,8 @@ $serviciosPorTipo = tmReporteRows($dbReportes,
     .tm-report-mini-kpis,
     .tm-caja-summary,
     .tm-report-info-grid,
+    .tm-report-finance-strip,
+    .tm-report-product-row,
     .tm-report-section-head{
       grid-template-columns:1fr;
     }
@@ -1050,11 +1200,18 @@ $serviciosPorTipo = tmReporteRows($dbReportes,
             <div class="tm-report-section-head">
               <div>
                 <h3>Ventas de productos</h3>
-                <p><?php echo count($ventasProductos); ?> venta(s) creadas en el periodo. Total cobrado: <?php echo tmMoney($ventasProductosTotal); ?>.</p>
+                <p><?php echo count($ventasProductos); ?> venta(s) creadas en el periodo. Total cobrado: <?php echo tmMoney($ventasProductosTotal); ?>. Ganancia liquida estimada: <?php echo tmMoney($ventasGananciaLiquida); ?>.</p>
               </div>
               <div class="tm-report-section-actions">
                 <a class="tm-report-btn" target="_blank" href="<?php echo tmReportePdf("ventas", $fechaInicialReporte, $fechaFinalReporte); ?>"><i class="fa fa-print"></i> Imprimir ventas</a>
               </div>
+            </div>
+
+            <div class="tm-report-mini-kpis">
+              <div class="tm-report-kpi"><i class="fa fa-money"></i><span>Capital de compra</span><strong><?php echo tmMoney($ventasCapitalCompra); ?></strong><small>Costo base de productos</small></div>
+              <div class="tm-report-kpi"><i class="fa fa-percent"></i><span>Impuestos 16%</span><strong><?php echo tmMoney($ventasImpuesto16); ?></strong><small>Calculado sobre ventas cobradas</small></div>
+              <div class="tm-report-kpi"><i class="fa fa-line-chart"></i><span>Ganancia bruta</span><strong><?php echo tmMoney($ventasGananciaBruta); ?></strong><small>Venta - capital</small></div>
+              <div class="tm-report-kpi"><i class="fa fa-check-circle"></i><span>Ganancia liquida</span><strong><?php echo tmMoney($ventasGananciaLiquida); ?></strong><small>Bruta - impuestos</small></div>
             </div>
 
             <div class="tm-report-card-grid wide">
@@ -1062,6 +1219,7 @@ $serviciosPorTipo = tmReporteRows($dbReportes,
                 <div class="tm-report-empty">Sin ventas de productos en este rango.</div>
               <?php endif; ?>
               <?php foreach($ventasProductos as $venta): ?>
+                <?php $finanzaVenta = $ventasProductosFinanzas["ventas"][(int)($venta["id"] ?? 0)] ?? array("items" => array(), "capital" => 0, "impuesto" => 0, "ganancia_bruta" => 0, "ganancia_liquida" => 0); ?>
                 <article class="tm-report-card">
                   <div class="tm-report-card-head">
                     <div>
@@ -1081,6 +1239,24 @@ $serviciosPorTipo = tmReporteRows($dbReportes,
                       <div class="tm-report-info"><b>Creacion</b><?php echo tmFechaReporte($venta["fecha"] ?? ""); ?></div>
                       <div class="tm-report-info"><b>Cobro</b><?php echo tmFechaReporte($venta["fecha_reporte"] ?? ""); ?></div>
                     </div>
+                    <div class="tm-report-finance-strip">
+                      <div class="tm-report-info"><b>Capital compra</b><?php echo tmMoney($finanzaVenta["capital"] ?? 0); ?></div>
+                      <div class="tm-report-info"><b>Impuesto 16%</b><?php echo tmMoney($finanzaVenta["impuesto"] ?? 0); ?></div>
+                      <div class="tm-report-info"><b>Ganancia bruta</b><?php echo tmMoney($finanzaVenta["ganancia_bruta"] ?? 0); ?></div>
+                      <div class="tm-report-info"><b>Ganancia liquida</b><?php echo tmMoney($finanzaVenta["ganancia_liquida"] ?? 0); ?></div>
+                    </div>
+                    <?php if(!empty($finanzaVenta["items"])): ?>
+                      <div class="tm-report-product-list">
+                        <?php foreach($finanzaVenta["items"] as $itemFinanciero): ?>
+                          <div class="tm-report-product-row">
+                            <div><b><?php echo tmE($itemFinanciero["producto"] ?? "Producto"); ?></b><span>Cant: <?php echo (int)($itemFinanciero["cantidad"] ?? 0); ?></span></div>
+                            <div><span>Compra</span><?php echo tmMoney($itemFinanciero["precio_compra"] ?? 0); ?></div>
+                            <div><span>Venta</span><?php echo tmMoney($itemFinanciero["precio_venta"] ?? 0); ?></div>
+                            <div><span>Total</span><?php echo tmMoney($itemFinanciero["total"] ?? 0); ?></div>
+                          </div>
+                        <?php endforeach; ?>
+                      </div>
+                    <?php endif; ?>
                   </div>
                 </article>
               <?php endforeach; ?>
