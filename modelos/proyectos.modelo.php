@@ -13,6 +13,25 @@ class ModeloProyectos{
 		}
 	}
 
+	static private function mdlAsegurarTablaCuotas($conexion){
+		$conexion->exec(
+			"CREATE TABLE IF NOT EXISTS proyecto_software_cuotas (
+				id INT AUTO_INCREMENT PRIMARY KEY,
+				id_proyecto INT NOT NULL,
+				numero INT NOT NULL DEFAULT 1,
+				concepto VARCHAR(120) NOT NULL DEFAULT 'Cuota de desarrollo',
+				monto DECIMAL(12,2) NOT NULL DEFAULT 0,
+				fecha_vencimiento DATE NULL,
+				estado VARCHAR(30) NOT NULL DEFAULT 'pendiente',
+				id_pago_servicio INT NULL,
+				fecha_pago DATETIME NULL,
+				fecha TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				INDEX idx_proyecto_estado (id_proyecto, estado),
+				INDEX idx_vencimiento (fecha_vencimiento)
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_spanish_ci"
+		);
+	}
+
 	static public function mdlBuscarDesarrolladorLibre(){
 		$stmt = Conexion::conectar()->prepare(
 			"SELECT u.id, u.nombre, COUNT(p.id) AS proyectos_activos
@@ -39,6 +58,43 @@ class ModeloProyectos{
 			$stmt->bindValue(":".$key, $value);
 		}
 		return $stmt->execute() ? "ok" : "error";
+	}
+
+	static public function mdlCrearCuotasSoftware($idProyecto, $cuotas){
+		$conexion = Conexion::conectar();
+		self::mdlAsegurarTablaCuotas($conexion);
+		$stmtBorrar = $conexion->prepare("DELETE FROM proyecto_software_cuotas WHERE id_proyecto = :id");
+		$stmtBorrar->bindValue(":id", (int)$idProyecto, PDO::PARAM_INT);
+		$stmtBorrar->execute();
+
+		if(empty($cuotas)){
+			return "ok";
+		}
+
+		$stmt = $conexion->prepare(
+			"INSERT INTO proyecto_software_cuotas(id_proyecto, numero, concepto, monto, fecha_vencimiento, estado)
+			 VALUES(:id_proyecto, :numero, :concepto, :monto, :fecha_vencimiento, 'pendiente')"
+		);
+		foreach($cuotas as $cuota){
+			$stmt->bindValue(":id_proyecto", (int)$idProyecto, PDO::PARAM_INT);
+			$stmt->bindValue(":numero", (int)$cuota["numero"], PDO::PARAM_INT);
+			$stmt->bindValue(":concepto", $cuota["concepto"]);
+			$stmt->bindValue(":monto", (float)$cuota["monto"]);
+			$stmt->bindValue(":fecha_vencimiento", $cuota["fecha_vencimiento"] ?: null);
+			if(!$stmt->execute()){
+				return "error";
+			}
+		}
+		return "ok";
+	}
+
+	static public function mdlMostrarCuotasSoftware($idProyecto){
+		$conexion = Conexion::conectar();
+		self::mdlAsegurarTablaCuotas($conexion);
+		$stmt = $conexion->prepare("SELECT * FROM proyecto_software_cuotas WHERE id_proyecto = :id ORDER BY numero ASC, id ASC");
+		$stmt->bindValue(":id", (int)$idProyecto, PDO::PARAM_INT);
+		$stmt->execute();
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 	}
 
 	static public function mdlMostrarProyectoSoftware($item = null, $valor = null){
@@ -271,6 +327,11 @@ class ModeloProyectos{
 				$conexion->rollBack();
 				return "no_existe";
 			}
+
+			self::mdlAsegurarTablaCuotas($conexion);
+			$stmt = $conexion->prepare("DELETE FROM proyecto_software_cuotas WHERE id_proyecto = :id");
+			$stmt->bindValue(":id", (int)$idProyecto, PDO::PARAM_INT);
+			$stmt->execute();
 
 			$stmt = $conexion->prepare("DELETE FROM proyecto_software_documentos WHERE id_proyecto = :id");
 			$stmt->bindValue(":id", (int)$idProyecto, PDO::PARAM_INT);

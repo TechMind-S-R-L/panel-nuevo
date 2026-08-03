@@ -50,6 +50,38 @@ class ControladorServicios{
 		return ModeloServicios::mdlMostrarEquipoTaller($idServicio);
 	}
 
+	static private function ctrGuardarDocumentoSoftwareInicial($proyecto, $campoArchivo, $tipoDocumento, $titulo, $observacion = ""){
+		if(!isset($_FILES[$campoArchivo]) || $_FILES[$campoArchivo]["error"] !== UPLOAD_ERR_OK){
+			return;
+		}
+
+		$extension = strtolower(pathinfo($_FILES[$campoArchivo]["name"], PATHINFO_EXTENSION));
+		if($extension !== "pdf"){
+			return;
+		}
+
+		$directorio = "vistas/documentos/proyectos/".(int)$proyecto["id"];
+		if(!is_dir($directorio)){
+			mkdir($directorio, 0775, true);
+		}
+
+		$nombreSeguro = strtolower($tipoDocumento)."-".date("YmdHis")."-".uniqid().".pdf";
+		$ruta = $directorio."/".$nombreSeguro;
+		if(!move_uploaded_file($_FILES[$campoArchivo]["tmp_name"], $ruta)){
+			return;
+		}
+
+		ModeloProyectos::mdlGuardarDocumento(array(
+			"id_proyecto" => (int)$proyecto["id"],
+			"id_usuario" => (int)$_SESSION["id"],
+			"tipo_documento" => $tipoDocumento,
+			"titulo" => $titulo,
+			"archivo" => $ruta,
+			"observacion" => $observacion,
+			"visible_cliente" => 1
+		));
+	}
+
 	static public function ctrMostrarEquiposTaller(){
 		return ModeloServicios::mdlMostrarEquiposTaller();
 	}
@@ -94,6 +126,8 @@ class ControladorServicios{
 			? (float)($_POST["precioTotalSoftware"] ?? 0)
 			: (($metrosDistancia * $precioMetro) + ($metrosCanalizacion * $precioCanalizacionMetro) + ($cantidadCamaras * $precioCamara) + $costoVisita + $costoDiagnostico + $costoTransporte + $costoManoObra + $recargoAltura + $recargoUrgencia);
 		$montoAdelantoSoftware = $esSoftware ? round((float)($_POST["montoAdelantoSoftware"] ?? 0), 2) : 0;
+		$numeroCuotasSoftware = $esSoftware ? max(1, min(12, (int)($_POST["numeroCuotasSoftware"] ?? 1))) : 0;
+		$fechaPrimeraCuotaSoftware = trim($_POST["fechaPrimeraCuotaSoftware"] ?? "");
 
 		if(!$esTaller && !$esSoftware && $_POST["tipoServicio"] != "Diagnostico tecnico" && $cantidadCamaras <= 0){
 			echo '<script>swal({type:"error",title:"Ingrese la cantidad de camaras",confirmButtonText:"Cerrar"});</script>';
@@ -110,8 +144,8 @@ class ControladorServicios{
 			return;
 		}
 
-		if($esSoftware && (empty($_POST["idClienteServicio"]) || empty($_POST["nombreProyectoSoftware"]) || empty($_POST["tipoSoftwareProyecto"]) || $total <= 0 || $montoAdelantoSoftware <= 0 || $montoAdelantoSoftware > $total)){
-			echo '<script>swal({type:"error",title:"Complete cliente, proyecto, precio total y adelanto valido",text:"El adelanto debe ser mayor a cero y no puede superar el precio total.",confirmButtonText:"Cerrar"});</script>';
+		if($esSoftware && (empty($_POST["idClienteServicio"]) || empty($_POST["nombreProyectoSoftware"]) || empty($_POST["tipoSoftwareProyecto"]) || $total <= 0 || $montoAdelantoSoftware <= 0 || $montoAdelantoSoftware > $total || $fechaPrimeraCuotaSoftware == "")){
+			echo '<script>swal({type:"error",title:"Complete cliente, proyecto, precio total, adelanto y plan de cuotas",text:"El adelanto debe ser mayor a cero, no puede superar el precio total y debe registrar fecha de primera cuota.",confirmButtonText:"Cerrar"});</script>';
 			return;
 		}
 
@@ -213,6 +247,30 @@ class ControladorServicios{
 					"estado" => "pendiente_adelanto",
 					"observaciones" => $_POST["observacionesSoftware"] ?? ""
 				));
+
+				$proyectoSoftware = ModeloProyectos::mdlMostrarProyectoPorServicio($servicio["id"]);
+				if($proyectoSoftware){
+					$saldoSoftware = max(0, $total - $montoAdelanto);
+					$cuotasSoftware = array();
+					if($saldoSoftware > 0){
+						$montoBaseCuota = floor(($saldoSoftware / $numeroCuotasSoftware) * 100) / 100;
+						$acumuladoCuotas = 0;
+						for($i = 1; $i <= $numeroCuotasSoftware; $i++){
+							$montoCuota = ($i == $numeroCuotasSoftware) ? round($saldoSoftware - $acumuladoCuotas, 2) : $montoBaseCuota;
+							$acumuladoCuotas += $montoCuota;
+							$fechaCuota = date("Y-m-d", strtotime($fechaPrimeraCuotaSoftware." +".($i - 1)." month"));
+							$cuotasSoftware[] = array(
+								"numero" => $i,
+								"concepto" => "Cuota ".$i." de ".$numeroCuotasSoftware." - saldo de desarrollo",
+								"monto" => $montoCuota,
+								"fecha_vencimiento" => $fechaCuota
+							);
+						}
+					}
+					ModeloProyectos::mdlCrearCuotasSoftware($proyectoSoftware["id"], $cuotasSoftware);
+					self::ctrGuardarDocumentoSoftwareInicial($proyectoSoftware, "propuestaTecnicaSoftware", "propuesta_tecnica", "Propuesta tecnica", "Documento cargado al crear el contrato.");
+					self::ctrGuardarDocumentoSoftwareInicial($proyectoSoftware, "propuestaComercialSoftware", "propuesta_comercial", "Propuesta comercial", "Documento cargado al crear el contrato.");
+				}
 			}
 
 			if(class_exists("ControladorLogs")){
