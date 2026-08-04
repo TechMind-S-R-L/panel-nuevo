@@ -343,6 +343,23 @@ class ModeloProyectos{
 				$conexion->rollBack();
 				return "no_existe";
 			}
+			$idServicio = (int)($proyecto["id_servicio"] ?? 0);
+
+			if($idServicio > 0){
+				$stmt = $conexion->prepare(
+					"DELETE FROM caja_movimientos
+					 WHERE (referencia_tipo = 'pago_servicio'
+					        AND id_referencia IN (SELECT id FROM servicios_pagos WHERE id_servicio = :id_servicio_pagos))
+					    OR (referencia_tipo = 'servicio' AND id_referencia = :id_servicio)"
+				);
+				$stmt->bindValue(":id_servicio_pagos", $idServicio, PDO::PARAM_INT);
+				$stmt->bindValue(":id_servicio", $idServicio, PDO::PARAM_INT);
+				$stmt->execute();
+
+				$stmt = $conexion->prepare("DELETE FROM servicios_pagos WHERE id_servicio = :id_servicio");
+				$stmt->bindValue(":id_servicio", $idServicio, PDO::PARAM_INT);
+				$stmt->execute();
+			}
 
 			$stmt = $conexion->prepare("DELETE FROM proyecto_software_documentos WHERE id_proyecto = :id");
 			$stmt->bindValue(":id", (int)$idProyecto, PDO::PARAM_INT);
@@ -355,6 +372,12 @@ class ModeloProyectos{
 			$stmt = $conexion->prepare("DELETE FROM proyectos_software WHERE id = :id");
 			$stmt->bindValue(":id", (int)$idProyecto, PDO::PARAM_INT);
 			$stmt->execute();
+
+			if($idServicio > 0){
+				$stmt = $conexion->prepare("DELETE FROM servicios_ventas WHERE id = :id_servicio");
+				$stmt->bindValue(":id_servicio", $idServicio, PDO::PARAM_INT);
+				$stmt->execute();
+			}
 
 			$conexion->commit();
 			return array("status" => "ok", "proyecto" => $proyecto);
