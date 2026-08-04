@@ -36,7 +36,7 @@ $concepto = "PAGO DE SOFTWARE";
 if($tipoPagoServicio == "adelanto_parcial_software"){
 	$concepto = "PAGO PARCIAL DE ADELANTO";
 }elseif($tipoPagoServicio == "amortizacion_software"){
-	$concepto = "AMORTIZACION DE SOFTWARE";
+	$concepto = "DESARROLLO DE SOFTWARE";
 }elseif($tipoPagoServicio == "pago_final_software" || strpos($tipoPagoServicio, "saldo_final") !== false || (!$pagoServicio && ($servicio["estado_pago"] == "aprobado" || (float)$proyecto["saldo_pendiente"] <= 0))){
 	$concepto = "PAGO FINAL DE SOFTWARE";
 }elseif(!$pagoServicio){
@@ -85,19 +85,19 @@ $pdf->Ln(14);
 $html = '
 <style>
 	body, table, p { font-size:9px; line-height:1.35; color:#162033; }
-	.titulo { font-size:13px; font-weight:bold; color:#102f45; }
-	.subtitulo { font-size:9px; color:#5a6b7c; }
+	.titulo { font-size:14px; font-weight:bold; color:#102f45; text-align:center; }
+	.subtitulo { font-size:9px; color:#5a6b7c; text-align:center; }
 	.box { border:1px solid #d7e5f2; background-color:#f8fbff; }
 	.label { color:#55708a; font-size:8px; font-weight:bold; text-transform:uppercase; }
 	.valor { font-size:10px; font-weight:bold; color:#102f45; }
 	.monto { font-size:14px; font-weight:bold; color:#1687b9; }
-	.tabla th { background-color:#12384d; color:#ffffff; font-weight:bold; }
+	.tabla th { background-color:#12384d; color:#ffffff; font-weight:bold; line-height:2; }
 	.tabla td { border-bottom:1px solid #d8e6f3; }
 	.nota { background-color:#eef8ff; color:#315a70; border:1px solid #cce8f8; font-size:8.5px; }
 	.firma { color:#102f45; font-size:9px; }
 </style>
 
-<div class="titulo">Comprobante de pago de proyecto</div>
+<div class="titulo" align="center">COMPROBANTE DE PAGO DE PROYECTO</div>
 <div class="subtitulo">Documento de constancia por dinero recibido para desarrollo contratado con TechMind S.R.L.</div>
 <br>
 
@@ -122,12 +122,12 @@ $html = '
 	</td>
 </tr>
 </table>
-<br>
+<br><br>
 
 <table class="tabla" cellpadding="6" cellspacing="0">
 <tr>
-	<th width="55%">Detalle financiero</th>
-	<th width="45%" align="right">Importe</th>
+	<th width="55%" height="20" valign="middle">Detalle financiero</th>
+	<th width="45%" height="20" align="right" valign="middle">Importe</th>
 </tr>
 <tr><td>'.swpTxt($conceptoDetalle).'</td><td align="right"><b>Bs '.number_format($monto, 2).'</b></td></tr>
 <tr><td>Precio total acordado</td><td align="right">Bs '.number_format((float)$proyecto["precio_total"], 2).'</td></tr>
@@ -144,7 +144,7 @@ $html = '
 	</td>
 </tr>
 </table>
-<br><br><br><br>
+<br><br><br><br><br><br>
 <table cellpadding="0" cellspacing="0">
 <tr>
 	<td width="45%" align="center" class="firma">______________________________<br>Firma caja / TechMind S.R.L.</td>
