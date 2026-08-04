@@ -13,25 +13,6 @@ class ModeloProyectos{
 		}
 	}
 
-	static private function mdlAsegurarTablaCuotas($conexion){
-		$conexion->exec(
-			"CREATE TABLE IF NOT EXISTS proyecto_software_cuotas (
-				id INT AUTO_INCREMENT PRIMARY KEY,
-				id_proyecto INT NOT NULL,
-				numero INT NOT NULL DEFAULT 1,
-				concepto VARCHAR(120) NOT NULL DEFAULT 'Cuota de desarrollo',
-				monto DECIMAL(12,2) NOT NULL DEFAULT 0,
-				fecha_vencimiento DATE NULL,
-				estado VARCHAR(30) NOT NULL DEFAULT 'pendiente',
-				id_pago_servicio INT NULL,
-				fecha_pago DATETIME NULL,
-				fecha TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-				INDEX idx_proyecto_estado (id_proyecto, estado),
-				INDEX idx_vencimiento (fecha_vencimiento)
-			) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_spanish_ci"
-		);
-	}
-
 	static public function mdlBuscarDesarrolladorLibre(){
 		$stmt = Conexion::conectar()->prepare(
 			"SELECT u.id, u.nombre, COUNT(p.id) AS proyectos_activos
@@ -58,43 +39,6 @@ class ModeloProyectos{
 			$stmt->bindValue(":".$key, $value);
 		}
 		return $stmt->execute() ? "ok" : "error";
-	}
-
-	static public function mdlCrearCuotasSoftware($idProyecto, $cuotas){
-		$conexion = Conexion::conectar();
-		self::mdlAsegurarTablaCuotas($conexion);
-		$stmtBorrar = $conexion->prepare("DELETE FROM proyecto_software_cuotas WHERE id_proyecto = :id");
-		$stmtBorrar->bindValue(":id", (int)$idProyecto, PDO::PARAM_INT);
-		$stmtBorrar->execute();
-
-		if(empty($cuotas)){
-			return "ok";
-		}
-
-		$stmt = $conexion->prepare(
-			"INSERT INTO proyecto_software_cuotas(id_proyecto, numero, concepto, monto, fecha_vencimiento, estado)
-			 VALUES(:id_proyecto, :numero, :concepto, :monto, :fecha_vencimiento, 'pendiente')"
-		);
-		foreach($cuotas as $cuota){
-			$stmt->bindValue(":id_proyecto", (int)$idProyecto, PDO::PARAM_INT);
-			$stmt->bindValue(":numero", (int)$cuota["numero"], PDO::PARAM_INT);
-			$stmt->bindValue(":concepto", $cuota["concepto"]);
-			$stmt->bindValue(":monto", (float)$cuota["monto"]);
-			$stmt->bindValue(":fecha_vencimiento", $cuota["fecha_vencimiento"] ?: null);
-			if(!$stmt->execute()){
-				return "error";
-			}
-		}
-		return "ok";
-	}
-
-	static public function mdlMostrarCuotasSoftware($idProyecto){
-		$conexion = Conexion::conectar();
-		self::mdlAsegurarTablaCuotas($conexion);
-		$stmt = $conexion->prepare("SELECT * FROM proyecto_software_cuotas WHERE id_proyecto = :id ORDER BY numero ASC, id ASC");
-		$stmt->bindValue(":id", (int)$idProyecto, PDO::PARAM_INT);
-		$stmt->execute();
-		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 	}
 
 	static public function mdlMostrarProyectoSoftware($item = null, $valor = null){
@@ -164,6 +108,78 @@ class ModeloProyectos{
 		}
 		$stmt->bindParam(":id_servicio", $idServicio, PDO::PARAM_INT);
 		return $stmt->execute() ? "ok" : "error";
+	}
+
+	static public function mdlRegistrarPagoLibreSoftware($idServicio, $monto, $idDesarrollador = null){
+		$conexion = Conexion::conectar();
+		$stmtProyecto = $conexion->prepare("SELECT * FROM proyectos_software WHERE id_servicio = :id LIMIT 1");
+		$stmtProyecto->bindValue(":id", (int)$idServicio, PDO::PARAM_INT);
+		$stmtProyecto->execute();
+		$proyecto = $stmtProyecto->fetch(PDO::FETCH_ASSOC);
+		if(!$proyecto){
+			return array("status" => "error");
+		}
+
+		$monto = max(0, round((float)$monto, 2));
+		$precioTotal = (float)($proyecto["precio_total"] ?? 0);
+		$adelantoPactado = (float)($proyecto["monto_adelanto"] ?? 0);
+		$adelantoPagado = (float)($proyecto["pago_adelanto"] ?? 0);
+		$saldoPagado = (float)($proyecto["pago_final"] ?? 0);
+		$pagadoActual = $adelantoPagado + $saldoPagado;
+		$saldoAntes = max(0, $precioTotal - $pagadoActual);
+		$montoAplicado = min($monto, $saldoAntes);
+		$adelantoPendiente = max(0, $adelantoPactado - $adelantoPagado);
+		$montoParaAdelanto = min($montoAplicado, $adelantoPendiente);
+		$montoParaSaldo = max(0, $montoAplicado - $montoParaAdelanto);
+		$nuevoAdelantoPagado = $adelantoPagado + $montoParaAdelanto;
+		$nuevoSaldoPagado = $saldoPagado + $montoParaSaldo;
+		$nuevoPagado = $nuevoAdelantoPagado + $nuevoSaldoPagado;
+		$saldoDespues = max(0, $precioTotal - $nuevoPagado);
+		$adelantoCompleto = $nuevoAdelantoPagado >= ($adelantoPactado - 0.01);
+		$pagadoCompleto = $saldoDespues <= 0.01;
+		$estado = $pagadoCompleto ? "pagado_final" : ($adelantoCompleto ? "en_desarrollo" : "pendiente_adelanto");
+
+		$stmt = $conexion->prepare(
+			"UPDATE proyectos_software
+			 SET pago_adelanto = :pago_adelanto,
+			     pago_final = :pago_final,
+			     saldo_pendiente = :saldo_pendiente,
+			     fecha_adelanto = CASE WHEN :monto_para_adelanto > 0 THEN NOW() ELSE fecha_adelanto END,
+			     fecha_pago_final = CASE WHEN :pagado_completo = 1 THEN NOW() ELSE fecha_pago_final END,
+			     fecha_inicio = CASE WHEN :adelanto_completo = 1 THEN COALESCE(fecha_inicio, CURDATE()) ELSE fecha_inicio END,
+			     id_desarrollador = CASE WHEN :adelanto_completo_asignacion = 1 THEN COALESCE(id_desarrollador, :id_desarrollador) ELSE id_desarrollador END,
+			     estado = :estado
+			 WHERE id_servicio = :id_servicio"
+		);
+		$stmt->bindValue(":pago_adelanto", $nuevoAdelantoPagado);
+		$stmt->bindValue(":pago_final", $nuevoSaldoPagado);
+		$stmt->bindValue(":saldo_pendiente", $saldoDespues);
+		$stmt->bindValue(":monto_para_adelanto", $montoParaAdelanto);
+		$stmt->bindValue(":pagado_completo", $pagadoCompleto ? 1 : 0, PDO::PARAM_INT);
+		$stmt->bindValue(":adelanto_completo", $adelantoCompleto ? 1 : 0, PDO::PARAM_INT);
+		$stmt->bindValue(":adelanto_completo_asignacion", ($adelantoCompleto && !empty($idDesarrollador)) ? 1 : 0, PDO::PARAM_INT);
+		if(empty($idDesarrollador)){
+			$stmt->bindValue(":id_desarrollador", null, PDO::PARAM_NULL);
+		}else{
+			$stmt->bindValue(":id_desarrollador", (int)$idDesarrollador, PDO::PARAM_INT);
+		}
+		$stmt->bindValue(":estado", $estado);
+		$stmt->bindValue(":id_servicio", (int)$idServicio, PDO::PARAM_INT);
+		if(!$stmt->execute()){
+			return array("status" => "error");
+		}
+
+		return array(
+			"status" => "ok",
+			"monto_aplicado" => $montoAplicado,
+			"monto_para_adelanto" => $montoParaAdelanto,
+			"monto_para_saldo" => $montoParaSaldo,
+			"saldo_antes" => $saldoAntes,
+			"saldo_despues" => $saldoDespues,
+			"adelanto_completo" => $adelantoCompleto,
+			"pagado_completo" => $pagadoCompleto,
+			"estado_proyecto" => $estado
+		);
 	}
 
 	static public function mdlRegistrarPagoFinal($idServicio, $monto){
@@ -327,11 +343,6 @@ class ModeloProyectos{
 				$conexion->rollBack();
 				return "no_existe";
 			}
-
-			self::mdlAsegurarTablaCuotas($conexion);
-			$stmt = $conexion->prepare("DELETE FROM proyecto_software_cuotas WHERE id_proyecto = :id");
-			$stmt->bindValue(":id", (int)$idProyecto, PDO::PARAM_INT);
-			$stmt->execute();
 
 			$stmt = $conexion->prepare("DELETE FROM proyecto_software_documentos WHERE id_proyecto = :id");
 			$stmt->bindValue(":id", (int)$idProyecto, PDO::PARAM_INT);

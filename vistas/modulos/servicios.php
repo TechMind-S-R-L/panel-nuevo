@@ -170,28 +170,17 @@ if(!array_key_exists($tipoServicioDirigido, $serviciosDisponibles)){
     min-height:38px;
     color:#666;
   }
-  .software-plan-grid{
+  .software-doc-grid{
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
     gap:12px;
   }
-  .software-cuotas-preview{
+  .software-pagos-preview{
     border:1px dashed #9bc7e4;
     border-radius:8px;
     padding:12px;
     background:#f7fbff;
     color:#24485c;
-  }
-  .software-cuotas-preview .cuota-linea{
-    display:flex;
-    justify-content:space-between;
-    gap:10px;
-    border-bottom:1px solid #dbeaf4;
-    padding:5px 0;
-    font-size:12px;
-  }
-  .software-cuotas-preview .cuota-linea:last-child{
-    border-bottom:0;
   }
   .servicio-card-grid{
     display:grid;
@@ -376,24 +365,7 @@ if(!array_key_exists($tipoServicioDirigido, $serviciosDisponibles)){
                       </div>
                     </div>
                   </div>
-                  <div class="software-plan-grid">
-                    <div class="form-group">
-                      <label>Cuotas del saldo</label>
-                      <select class="form-control calcServicio campoSoftwareRequerido" name="numeroCuotasSoftware">
-                        <option value="1">1 cuota</option>
-                        <option value="2">2 cuotas</option>
-                        <option value="3" selected>3 cuotas</option>
-                        <option value="4">4 cuotas</option>
-                        <option value="5">5 cuotas</option>
-                        <option value="6">6 cuotas</option>
-                      </select>
-                      <p class="help-block">No registra ingreso en caja hasta que cada cuota sea cobrada.</p>
-                    </div>
-                    <div class="form-group">
-                      <label>Primera cuota vence</label>
-                      <input type="date" class="form-control calcServicio campoSoftwareRequerido" name="fechaPrimeraCuotaSoftware">
-                      <p class="help-block">Las siguientes se programan mensualmente.</p>
-                    </div>
+                  <div class="software-doc-grid">
                     <div class="form-group">
                       <label>Propuesta tecnica PDF</label>
                       <input type="file" class="form-control" name="propuestaTecnicaSoftware" accept="application/pdf">
@@ -405,8 +377,8 @@ if(!array_key_exists($tipoServicioDirigido, $serviciosDisponibles)){
                       <p class="help-block">Cotizacion, alcance economico o documento firmado.</p>
                     </div>
                   </div>
-                  <div class="software-cuotas-preview" id="softwareCuotasPreview">
-                    Configure precio, adelanto, cuotas y fecha para ver el cronograma.
+                  <div class="software-pagos-preview" id="softwarePagosPreview">
+                    El saldo restante se cobrara en caja como pagos parciales libres, segun vaya pagando el cliente.
                   </div>
                   <div class="form-group">
                     <label>Alcance inicial del software</label>
@@ -841,8 +813,6 @@ function calcularServicio(){
   if(tipoServicio === "Desarrollo de software"){
     var totalSoftware = Number($('[name="precioTotalSoftware"]').val()) || 0;
     var montoAdelanto = Number($('[name="montoAdelantoSoftware"]').val()) || 0;
-    var numeroCuotas = Number($('[name="numeroCuotasSoftware"]').val()) || 1;
-    var fechaPrimeraCuota = $('[name="fechaPrimeraCuotaSoftware"]').val() || "";
     if(totalSoftware > 0 && montoAdelanto > totalSoftware){
       montoAdelanto = totalSoftware;
       $('[name="montoAdelantoSoftware"]').val(montoAdelanto.toFixed(2));
@@ -855,24 +825,13 @@ function calcularServicio(){
     $("#tarifaServicioActual").text("Contrato de software: adelanto Bs " + montoAdelanto.toFixed(2) + " (" + adelanto.toFixed(2) + "%)");
     $("#desgloseServicio").html(
       '<div class="linea"><span>Adelanto a cobrar en caja</span><strong>Bs ' + montoAdelanto.toFixed(2) + '</strong></div>' +
-      '<div class="linea"><span>Saldo a la entrega</span><strong>Bs ' + Math.max(0, totalSoftware - montoAdelanto).toFixed(2) + '</strong></div>'
+      '<div class="linea"><span>Saldo pendiente amortizable</span><strong>Bs ' + Math.max(0, totalSoftware - montoAdelanto).toFixed(2) + '</strong></div>'
     );
     var saldoSoftware = Math.max(0, totalSoftware - montoAdelanto);
-    if(saldoSoftware <= 0 || !fechaPrimeraCuota){
-      $("#softwareCuotasPreview").html("Configure saldo pendiente y fecha de primera cuota para ver el cronograma.");
+    if(saldoSoftware <= 0){
+      $("#softwarePagosPreview").html("El proyecto quedara cubierto con el adelanto registrado.");
     }else{
-      var montoBase = Math.floor((saldoSoftware / numeroCuotas) * 100) / 100;
-      var acumulado = 0;
-      var htmlCuotas = '<strong>Plan de cobro del saldo pendiente</strong>';
-      for(var i = 1; i <= numeroCuotas; i++){
-        var montoCuota = (i === numeroCuotas) ? (saldoSoftware - acumulado) : montoBase;
-        acumulado += montoCuota;
-        var fechaCuota = new Date(fechaPrimeraCuota + "T00:00:00");
-        fechaCuota.setMonth(fechaCuota.getMonth() + (i - 1));
-        var fechaTexto = fechaCuota.toLocaleDateString("es-BO");
-        htmlCuotas += '<div class="cuota-linea"><span>Cuota ' + i + ' / ' + numeroCuotas + ' - ' + fechaTexto + '</span><strong>Bs ' + montoCuota.toFixed(2) + '</strong></div>';
-      }
-      $("#softwareCuotasPreview").html(htmlCuotas);
+      $("#softwarePagosPreview").html('<strong>Saldo amortizable: Bs ' + saldoSoftware.toFixed(2) + '</strong><br>Despues del adelanto, caja podra registrar pagos parciales libres hasta dejar el saldo en cero.');
     }
     return;
   }

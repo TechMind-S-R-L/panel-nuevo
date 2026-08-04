@@ -110,10 +110,8 @@ foreach($proyectos as $proyecto){
   }
   $documentos = ModeloProyectos::mdlMostrarDocumentos((int)$proyecto["id"]);
   $avances = ModeloProyectos::mdlMostrarAvances((int)$proyecto["id"]);
-  $cuotas = ModeloProyectos::mdlMostrarCuotasSoftware((int)$proyecto["id"]);
   $documentos = is_array($documentos) ? $documentos : array();
   $avances = is_array($avances) ? $avances : array();
-  $cuotas = is_array($cuotas) ? $cuotas : array();
   $evidencias = array_filter($documentos, "tmProyectoEsEvidencia");
   $totalDocumentos += count($documentos);
   $totalEvidencias += count($evidencias);
@@ -130,7 +128,6 @@ foreach($proyectos as $proyecto){
     "proyecto" => $proyecto,
     "documentos" => $documentos,
     "avances" => $avances,
-    "cuotas" => $cuotas,
     "evidencias" => $evidencias,
     "grupo" => $grupo
   );
@@ -1026,7 +1023,6 @@ $avancePromedio = count($proyectosVista) > 0 ? round($avanceAcumulado / count($p
                   $proyecto = $itemProyecto["proyecto"];
                   $documentos = $itemProyecto["documentos"];
                   $avancesProyecto = $itemProyecto["avances"];
-                  $cuotasProyecto = $itemProyecto["cuotas"];
                   $estadoInfo = tmProyectoEstado($proyecto["estado"] ?? "");
                   $avance = max(0, min(100, (int)($proyecto["porcentaje_avance"] ?? 0)));
                   $cliente = $proyecto["cliente"] ?? "-";
@@ -1041,14 +1037,13 @@ $avancePromedio = count($proyectosVista) > 0 ? round($avanceAcumulado / count($p
                   $proyectoJson = htmlspecialchars(json_encode($proyectoDatosModal, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, "UTF-8");
                   $docsJson = htmlspecialchars(json_encode($documentos, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, "UTF-8");
                   $avancesJson = htmlspecialchars(json_encode($avancesProyecto, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, "UTF-8");
-                  $cuotasJson = htmlspecialchars(json_encode($cuotasProyecto, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, "UTF-8");
                   $evidenciasProyecto = array_filter($documentos, function($doc){
                     $tipoDoc = strtolower((string)($doc["tipo_documento"] ?? ""));
                     $archivoDoc = strtolower((string)($doc["archivo"] ?? ""));
                     return strpos($tipoDoc, "evidencia") !== false || strpos($tipoDoc, "captura") !== false || strpos($tipoDoc, "video") !== false || preg_match('/\.(png|jpg|jpeg|webp|gif|mp4|mov|avi|webm)$/', $archivoDoc);
                   });
                 ?>
-                <article class="proyecto-card proyectoCardDetalle estado-<?php echo $grupoProyecto; ?>" data-search="<?php echo htmlspecialchars($searchProyecto, ENT_QUOTES, "UTF-8"); ?>" data-proyecto="<?php echo $proyectoJson; ?>" data-documentos="<?php echo $docsJson; ?>" data-avances="<?php echo $avancesJson; ?>" data-cuotas="<?php echo $cuotasJson; ?>">
+                <article class="proyecto-card proyectoCardDetalle estado-<?php echo $grupoProyecto; ?>" data-search="<?php echo htmlspecialchars($searchProyecto, ENT_QUOTES, "UTF-8"); ?>" data-proyecto="<?php echo $proyectoJson; ?>" data-documentos="<?php echo $docsJson; ?>" data-avances="<?php echo $avancesJson; ?>">
                   <div class="proyecto-card-head">
                     <div>
                       <span class="proyecto-card-code"><i class="fa fa-hashtag"></i> <?php echo tmProyectoTexto($proyecto["codigo"] ?? ""); ?></span>
@@ -1091,12 +1086,6 @@ $avancePromedio = count($proyectosVista) > 0 ? round($avanceAcumulado / count($p
                       <span>Documentos</span>
                       <strong><?php echo count($documentos); ?> archivo(s)</strong>
                     </div>
-                    <?php if($tmProyectoPuedeVerMontos): ?>
-                      <div class="proyecto-card-item">
-                        <span>Cuotas</span>
-                        <strong><?php echo count($cuotasProyecto); ?> programada(s)</strong>
-                      </div>
-                    <?php endif; ?>
                     <div class="proyecto-card-item">
                       <span>Evidencias</span>
                       <strong><?php echo count($evidenciasProyecto); ?> captura/video</strong>
@@ -1249,13 +1238,6 @@ $avancePromedio = count($proyectosVista) > 0 ? round($avanceAcumulado / count($p
         <div class="proyecto-summary-card"><span>Adelanto</span><strong id="proyectoModalAdelanto">-</strong></div>
         <div class="proyecto-summary-card"><span>Saldo pendiente</span><strong id="proyectoModalSaldo">-</strong></div>
       </div>
-
-      <?php if($tmProyectoPuedeVerMontos): ?>
-      <div class="proyecto-modal-section">
-        <span class="proyecto-modal-block-title">Plan de cuotas / amortizacion</span>
-        <div id="proyectoModalCuotas">-</div>
-      </div>
-      <?php endif; ?>
 
       <div class="proyecto-modal-section">
         <span class="proyecto-modal-block-title">Responsables y fechas</span>
@@ -1463,23 +1445,6 @@ function renderAvancesProyecto(avances){
   return html;
 }
 
-function renderCuotasProyecto(cuotas){
-  if(!tmProyectoPuedeVerMontos){
-    return "";
-  }
-  if(!cuotas || !cuotas.length){
-    return '<p class="text-muted" style="margin:0">Sin cuotas programadas. El saldo se cobrara segun acuerdo comercial.</p>';
-  }
-  var html = '<div class="proyecto-detail-grid">';
-  cuotas.forEach(function(c){
-    var estado = String(c.estado || "pendiente").replace(/_/g, " ");
-    html += '<div class="proyecto-detail-box"><span>Cuota '+escapeHtmlProyecto(c.numero || "")+' - '+escapeHtmlProyecto(fechaProyecto(c.fecha_vencimiento))+'</span>';
-    html += '<p><strong>'+dineroProyecto(c.monto)+'</strong> <small class="text-muted">'+escapeHtmlProyecto(estado)+'</small></p></div>';
-  });
-  html += '</div>';
-  return html;
-}
-
 function renderChecklistProyecto(p, docs, avances){
   var avance = Number(p.porcentaje_avance || 0);
   var tieneDocs = (docs || []).some(function(d){ return !esEvidenciaProyecto(d); });
@@ -1499,7 +1464,7 @@ function renderChecklistProyecto(p, docs, avances){
   }).join("");
 }
 
-function pintarDetalleProyecto(p, docs, avances, cuotas){
+function pintarDetalleProyecto(p, docs, avances){
   var avance = Math.max(0, Math.min(100, Number(p.porcentaje_avance || 0)));
   var estadoTexto = textoEstadoProyecto(p.estado);
   var estadoClase = claseEstadoProyectoModal(p.estado);
@@ -1521,7 +1486,6 @@ function pintarDetalleProyecto(p, docs, avances, cuotas){
   $("#proyectoModalTotal").text(dineroProyecto(p.precio_total));
   $("#proyectoModalAdelanto").text(dineroProyecto(p.monto_adelanto));
   $("#proyectoModalSaldo").text(dineroProyecto(p.saldo_pendiente));
-  $("#proyectoModalCuotas").html(renderCuotasProyecto(cuotas));
   $("#proyectoModalAlcance").text(valorProyecto(p.alcance));
   $("#proyectoModalEntregables").text(valorProyecto(p.entregables));
   $("#proyectoModalExclusiones").text(valorProyecto(p.exclusiones));
@@ -1540,13 +1504,11 @@ $(document).on("click", ".proyectoCardDetalle", function(e){
   var p = {};
   var docs = [];
   var avances = [];
-  var cuotas = [];
   try{ p = JSON.parse($(this).attr("data-proyecto") || "{}"); }catch(error){}
   try{ docs = JSON.parse($(this).attr("data-documentos") || "[]"); }catch(error){}
   try{ avances = JSON.parse($(this).attr("data-avances") || "[]"); }catch(error){}
-  try{ cuotas = JSON.parse($(this).attr("data-cuotas") || "[]"); }catch(error){}
 
-  pintarDetalleProyecto(p, docs, avances, cuotas);
+  pintarDetalleProyecto(p, docs, avances);
   $("#proyectoModalAcciones").html($(this).find(".proyecto-actions").html());
   $("#modalVerProyectoSoftware").modal("show");
 });

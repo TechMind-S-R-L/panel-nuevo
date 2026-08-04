@@ -155,29 +155,6 @@ class ModeloServicios{
 			$stmt->bindValue(":id", (int)$idServicio, PDO::PARAM_INT);
 			$stmt->execute();
 
-			$conexion->exec(
-				"CREATE TABLE IF NOT EXISTS proyecto_software_cuotas (
-					id INT AUTO_INCREMENT PRIMARY KEY,
-					id_proyecto INT NOT NULL,
-					numero INT NOT NULL DEFAULT 1,
-					concepto VARCHAR(120) NOT NULL DEFAULT 'Cuota de desarrollo',
-					monto DECIMAL(12,2) NOT NULL DEFAULT 0,
-					fecha_vencimiento DATE NULL,
-					estado VARCHAR(30) NOT NULL DEFAULT 'pendiente',
-					id_pago_servicio INT NULL,
-					fecha_pago DATETIME NULL,
-					fecha TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-					INDEX idx_proyecto_estado (id_proyecto, estado),
-					INDEX idx_vencimiento (fecha_vencimiento)
-				) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_spanish_ci"
-			);
-			$stmt = $conexion->prepare(
-				"DELETE FROM proyecto_software_cuotas
-				 WHERE id_proyecto IN (SELECT id FROM proyectos_software WHERE id_servicio = :id)"
-			);
-			$stmt->bindValue(":id", (int)$idServicio, PDO::PARAM_INT);
-			$stmt->execute();
-
 			$stmt = $conexion->prepare(
 				"DELETE FROM proyecto_software_documentos
 				 WHERE id_proyecto IN (SELECT id FROM proyectos_software WHERE id_servicio = :id)"
@@ -207,7 +184,7 @@ class ModeloServicios{
 		$stmt = Conexion::conectar()->prepare(
 			"SELECT * FROM servicios_ventas
 			 WHERE estado_pago = 'pendiente'
-			    OR estado_pago IN ('pendiente_adelanto', 'pendiente_final')
+			    OR estado_pago IN ('pendiente_adelanto', 'adelanto_pagado', 'pendiente_final')
 			    OR (tipo_servicio = 'Soporte tecnico en taller' AND estado_pago = 'pendiente_retiro' AND estado_servicio = 'listo_cobro')
 			 ORDER BY fecha DESC, id DESC"
 		);
@@ -281,7 +258,7 @@ class ModeloServicios{
 				     codigo_transaccion = :codigo_transaccion,
 				     id_cajero = :id_cajero,
 				     fecha_pago = NOW()
-				 WHERE id = :id AND estado_pago IN ('pendiente_adelanto', 'pendiente_final')"
+				 WHERE id = :id AND estado_pago IN ('pendiente_adelanto', 'adelanto_pagado', 'pendiente_final')"
 			);
 			$stmt->bindParam(":estado_pago", $estadoPago, PDO::PARAM_STR);
 			$stmt->bindParam(":estado_servicio", $estadoServicio, PDO::PARAM_STR);

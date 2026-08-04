@@ -32,10 +32,10 @@ function etiquetaCobroServicio($servicio){
     }
   }
   if(($servicio["estado_pago"] ?? "") == "adelanto_pagado"){
-    return '<span class="label label-primary">Adelanto cobrado</span>';
+    return '<span class="label label-primary">Saldo pendiente</span>';
   }
   if(($servicio["estado_pago"] ?? "") == "pendiente_final"){
-    return '<span class="label label-warning">Pendiente pago final</span>';
+    return '<span class="label label-warning">Saldo pendiente</span>';
   }
   if(($servicio["estado_pago"] ?? "") == "aprobado"){
     if(($servicio["tipo_servicio"] ?? "") == "Soporte tecnico en taller" && $estadoServicio == "pagado_retiro"){
@@ -74,17 +74,15 @@ function datosCobroServicio($servicio){
 
   if($esSoftware && $proyectoSoftware){
     $desarrollador = $proyectoSoftware["desarrollador"] ?? "";
-    if(($servicio["estado_pago"] ?? "") == "pendiente_final"){
-      $montoACobrar = (float)$proyectoSoftware["saldo_pendiente"];
-      $conceptoCobro = "Saldo final";
-    }else if(($servicio["estado_pago"] ?? "") == "pendiente_adelanto"){
-      $adelantoPactado = (float)($proyectoSoftware["monto_adelanto"] ?? 0);
-      $adelantoPagado = (float)($proyectoSoftware["pago_adelanto"] ?? 0);
-      $montoACobrar = max(0, $adelantoPactado - $adelantoPagado);
-      if($montoACobrar <= 0){
-        $montoACobrar = $adelantoPactado;
-      }
-      $conceptoCobro = ($adelantoPagado > 0 ? "Saldo de adelanto " : "Adelanto ").number_format((float)$proyectoSoftware["porcentaje_adelanto"], 2)."%";
+    $precioSoftware = (float)($proyectoSoftware["precio_total"] ?? 0);
+    $pagadoSoftware = (float)($proyectoSoftware["pago_adelanto"] ?? 0) + (float)($proyectoSoftware["pago_final"] ?? 0);
+    $montoACobrar = max(0, $precioSoftware - $pagadoSoftware);
+    $adelantoPactado = (float)($proyectoSoftware["monto_adelanto"] ?? 0);
+    $adelantoPagado = (float)($proyectoSoftware["pago_adelanto"] ?? 0);
+    if($adelantoPagado < ($adelantoPactado - 0.01)){
+      $conceptoCobro = "Saldo de adelanto / pago parcial";
+    }else{
+      $conceptoCobro = "Saldo pendiente amortizable";
     }
   }
 
@@ -169,7 +167,7 @@ function accionesCobroServicio($servicio, $modo){
           tallerEvidencias="'.tmCobroServicioEsc($infoTaller["evidencias"]).'"
           esSoftware="'.($esSoftware ? "1" : "0").'"
           estadoPago="'.tmCobroServicioEsc($servicio["estado_pago"] ?? "").'"
-          pagoParcial="'.($esSoftware && ($servicio["estado_pago"] ?? "") == "pendiente_adelanto" ? "1" : "0").'"
+          pagoParcial="'.($esSoftware ? "1" : "0").'"
           title="Registrar cobro del servicio">
           <i class="fa fa-check"></i> Cobrar
         </button>';
@@ -996,7 +994,7 @@ function renderTarjetasCobrosServicio($servicios, $modo){
       <input type="hidden" id="cobroServicioEsTaller">
       <input type="hidden" id="cobroServicioPermiteParcial" value="0">
       <div class="alert alert-info" id="mensajeRetiroAlmacen" style="display:none">Al confirmar el cobro se generara la nota de venta para el cliente. Con esa nota el cliente debe pasar por almacen para retirar su equipo.</div>
-      <div class="alert alert-warning" id="mensajeAdelantoParcial" style="display:none">Este adelanto permite pago parcial. Si el cliente paga menos, el proyecto seguira pendiente hasta completar el adelanto pactado.</div>
+      <div class="alert alert-warning" id="mensajeAdelantoParcial" style="display:none">Este proyecto permite pagos parciales libres. El monto recibido se abonara al saldo pendiente y quedara registrado en caja.</div>
       <div id="grupoServicioTallerInforme" class="taller-caja-report" style="display:none">
         <h5><i class="fa fa-clipboard"></i> Informe tecnico final para calcular cobro</h5>
         <div class="taller-report-grid">
