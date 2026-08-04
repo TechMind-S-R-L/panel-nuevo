@@ -1113,7 +1113,7 @@ if(is_array($usuarios)){
           <div class="tm-form-head-icon"><i class="fa fa-user-plus"></i></div>
           <div>
             <h4>Agregar usuario</h4>
-            <p>El sistema genera el usuario automaticamente y envia una contrasena temporal al correo registrado.</p>
+            <p>El sistema genera el usuario automaticamente y envia un enlace de primer acceso al correo registrado.</p>
           </div>
           <button type="button" class="tm-modal-close" data-dismiss="modal" aria-label="Cerrar">&times;</button>
         </div>
@@ -1156,7 +1156,7 @@ if(is_array($usuarios)){
               </div>
 
               <div class="tm-user-note">
-                Cuando el admin o el area correspondiente entregue el acceso, el usuario recibira sus credenciales temporales por correo y en el primer ingreso debera cambiarlas.
+                El usuario recibira un enlace seguro por correo para crear su contrasena personal en el primer ingreso.
               </div>
             </div>
 

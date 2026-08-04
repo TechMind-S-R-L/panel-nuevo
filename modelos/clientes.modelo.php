@@ -321,4 +321,39 @@ class ModeloClientes{
 
 	}
 
+	static private function mdlAsegurarTablaPasswordWebTokens(){
+		$conexion = Conexion::conectar();
+		$conexion->exec(
+			"CREATE TABLE IF NOT EXISTS web_cliente_password_tokens (
+				id INT AUTO_INCREMENT PRIMARY KEY,
+				id_cliente INT NOT NULL,
+				token_hash VARCHAR(64) NOT NULL,
+				expira_en DATETIME NOT NULL,
+				usado TINYINT(1) NOT NULL DEFAULT 0,
+				creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE KEY uk_web_cliente_token_hash (token_hash),
+				KEY idx_web_cliente_password (id_cliente, usado, expira_en)
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+		);
+	}
+
+	static public function mdlGuardarTokenPasswordWeb($idCliente, $tokenHash, $expira){
+		self::mdlAsegurarTablaPasswordWebTokens();
+		$conexion = Conexion::conectar();
+
+		$stmt = $conexion->prepare("UPDATE web_cliente_password_tokens SET usado = 1 WHERE id_cliente = :id_cliente AND usado = 0");
+		$stmt->bindParam(":id_cliente", $idCliente, PDO::PARAM_INT);
+		$stmt->execute();
+
+		$stmt = $conexion->prepare(
+			"INSERT INTO web_cliente_password_tokens(id_cliente, token_hash, expira_en, usado)
+			 VALUES(:id_cliente, :token_hash, :expira_en, 0)"
+		);
+		$stmt->bindParam(":id_cliente", $idCliente, PDO::PARAM_INT);
+		$stmt->bindParam(":token_hash", $tokenHash, PDO::PARAM_STR);
+		$stmt->bindParam(":expira_en", $expira, PDO::PARAM_STR);
+
+		return $stmt->execute() ? "ok" : "error";
+	}
+
 }

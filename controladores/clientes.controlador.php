@@ -15,44 +15,35 @@ class ControladorClientes{
 		return $password;
 	}
 
-	static private function ctrEnviarCorreoClienteWeb($cliente, $passwordTemporal){
+	static private function ctrUrlPaginaWeb(){
+		$base = trim((string)(getenv("TECHMIND_WEB_URL") ?: ""));
+		return $base != "" ? rtrim($base, "/") : "https://techmind.com.bo";
+	}
+
+	static private function ctrEnviarCorreoClienteWeb($cliente, $link){
 		if(empty($cliente["email"]) || !filter_var($cliente["email"], FILTER_VALIDATE_EMAIL)){
 			return false;
 		}
 
-		$protocolo = (!empty($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] !== "off") ? "https" : "http";
-		$host = $_SERVER["HTTP_HOST"] ?? "localhost";
-		$script = $_SERVER["SCRIPT_NAME"] ?? "/techmind/index.php";
-		$base = rtrim(str_replace("\\", "/", dirname($script)), "/");
-		$link = $protocolo."://".$host.$base;
-
 		$mensajeHtml = '
-			<h2>Acceso web TechMind</h2>
-			<p>Hola <b>'.htmlspecialchars($cliente["nombre"], ENT_QUOTES, "UTF-8").'</b>, se genero una nueva contrasena para tu acceso web.</p>
-			<p><b>Usuario / documento:</b> '.htmlspecialchars($cliente["documento"], ENT_QUOTES, "UTF-8").'</p>
-			<p><b>Contrasena:</b> '.htmlspecialchars($passwordTemporal, ENT_QUOTES, "UTF-8").'</p>
-			<p>Ingresa desde: <a href="'.$link.'">'.$link.'</a></p>
+			<!doctype html><html><body style="margin:0;background:#f4f7fb;font-family:Arial,sans-serif;color:#14213d">
+			<div style="max-width:640px;margin:0 auto;padding:28px 16px">
+			<div style="background:#fff;border:1px solid #dbe8f7;border-radius:22px;overflow:hidden;box-shadow:0 20px 55px rgba(25,74,145,.12)">
+			<div style="padding:24px;background:linear-gradient(135deg,#eef6ff,#fff)"><img src="'.self::ctrUrlPaginaWeb().'/dist/images/logos/LOGO%20(1).png" alt="TechMind" style="max-width:175px;height:auto"></div>
+			<div style="padding:28px">
+			<h1 style="margin:0 0 10px;font-size:24px;color:#10233f">Acceso web TechMind</h1>
+			<p style="font-size:15px;line-height:1.6;color:#51627a">Hola <b>'.htmlspecialchars($cliente["nombre"], ENT_QUOTES, "UTF-8").'</b>, usa este enlace para crear o cambiar la contrasena de tu cuenta web.</p>
+			<p style="font-size:15px;line-height:1.6;color:#51627a">El enlace estara disponible por 60 minutos.</p>
+			<p style="margin:28px 0"><a href="'.htmlspecialchars($link, ENT_QUOTES, "UTF-8").'" style="display:inline-block;background:#2478d4;color:#fff;text-decoration:none;font-weight:700;border-radius:14px;padding:14px 22px">Crear o cambiar contrasena</a></p>
+			<p style="font-size:12px;line-height:1.5;color:#7a8799">Si no solicitaste este acceso, puedes ignorar este correo.</p>
+			</div></div></div></body></html>
 		';
 
-		$cabeceras = "MIME-Version: 1.0\r\n";
-		$cabeceras .= "Content-type:text/html;charset=UTF-8\r\n";
-		$cabeceras .= "From: TechMind <no-reply@techmind.local>\r\n";
-
-		$enviado = @mail($cliente["email"], "Nueva contrasena web TechMind", $mensajeHtml, $cabeceras);
-
-		if(!$enviado){
-			$directorioLog = __DIR__ . "/../extensiones/logs";
-			if(!is_dir($directorioLog)){
-				mkdir($directorioLog, 0755, true);
-			}
-			file_put_contents(
-				$directorioLog . "/correos-pendientes.log",
-				"[".date("Y-m-d H:i:s")."] PARA: ".$cliente["email"]." | ASUNTO: Nueva contrasena web TechMind".PHP_EOL.strip_tags(str_replace(["<br>", "<br/>", "<br />"], PHP_EOL, $mensajeHtml)).PHP_EOL.PHP_EOL,
-				FILE_APPEND
-			);
+		if(class_exists("ControladorUsuarios")){
+			return ControladorUsuarios::ctrEnviarCorreoSistema($cliente["email"], "Acceso web TechMind", $mensajeHtml);
 		}
 
-		return true;
+		return @mail($cliente["email"], "Acceso web TechMind", $mensajeHtml);
 	}
 
 	static private function ctrDatosClienteValidos($datos){
@@ -303,43 +294,40 @@ class ControladorClientes{
 			return;
 		}
 
-		$modo = $_POST["modoPasswordWeb"] ?? "generar";
-		$passwordPlano = "";
-
-		if($modo == "manual"){
-			$passwordPlano = trim($_POST["passwordWebManual"] ?? "");
-			$confirmar = trim($_POST["passwordWebConfirmar"] ?? "");
-			if($passwordPlano !== $confirmar || !preg_match('/^[a-zA-Z0-9]{6,20}$/', $passwordPlano)){
-				echo '<script>swal({type:"error",title:"Contrasena invalida",text:"Debe tener de 6 a 20 letras o numeros y coincidir.",confirmButtonText:"Cerrar"});</script>';
-				return;
-			}
-		}else{
-			$passwordPlano = self::ctrGenerarPasswordWeb();
+		if(empty($cliente["email"]) || !filter_var($cliente["email"], FILTER_VALIDATE_EMAIL)){
+			echo '<script>swal({type:"error",title:"Correo requerido",text:"El cliente necesita un correo valido para recibir el enlace de acceso web.",confirmButtonText:"Cerrar"});</script>';
+			return;
 		}
 
-		$respuesta = ModeloClientes::mdlActualizarPasswordWeb("clientes", $idCliente, self::ctrHashPasswordWeb($passwordPlano));
+		$token = bin2hex(random_bytes(32));
+		$tokenHash = hash("sha256", $token);
+		$expira = date("Y-m-d H:i:s", strtotime("+1 hour"));
+		$respuesta = ModeloClientes::mdlGuardarTokenPasswordWeb($idCliente, $tokenHash, $expira);
 
 		if($respuesta == "ok"){
-			self::ctrEnviarCorreoClienteWeb($cliente, $passwordPlano);
+			$link = self::ctrUrlPaginaWeb()."/tienda.php?modulo=restablecer-password&token=".$token;
+			$enviado = self::ctrEnviarCorreoClienteWeb($cliente, $link);
 
 			if(class_exists("ControladorLogs")){
-				ControladorLogs::ctrRegistrarLog("password_web", "clientes", "Clave web actualizada para cliente ".$cliente["nombre"]);
+				ControladorLogs::ctrRegistrarLog("password_web", "clientes", "Enlace de clave web generado para cliente ".$cliente["nombre"]);
 			}
 
-			$textoCorreo = (!empty($cliente["email"]) && filter_var($cliente["email"], FILTER_VALIDATE_EMAIL))
-				? "Si el correo esta configurado, se envio la nueva clave. Tambien queda registrada en correos pendientes si el servidor no puede enviar."
-				: "El cliente no tiene correo valido. Entregue la clave manualmente.";
+			$textoCorreo = $enviado
+				? "Se envio un enlace al correo del cliente para crear o cambiar su contrasena web."
+				: "Se genero el enlace, pero el servidor no confirmo el envio. Revise la configuracion SMTP o el log de correos pendientes.";
 
 			echo '<script>
 				swal({
 					type: "success",
-					title: "Clave web actualizada",
-					html: "'.$textoCorreo.'<br><br><b>Clave temporal:</b> '.htmlspecialchars($passwordPlano, ENT_QUOTES, "UTF-8").'",
+					title: "Enlace web generado",
+					text: "'.$textoCorreo.'",
 					confirmButtonText: "Cerrar"
 				}).then(function(result){
 					window.location = "clientes";
 				});
 			</script>';
+		}else{
+			echo '<script>swal({type:"error",title:"No se pudo generar el enlace",text:"Revise la base de datos o permisos para crear la tabla de tokens web.",confirmButtonText:"Cerrar"});</script>';
 		}
 	}
 

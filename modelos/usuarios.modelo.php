@@ -134,6 +134,8 @@ class ModeloUsuarios {
     =============================================*/
     static public function mdlIngresarUsuario($tabla, $datos) {
 
+        self::mdlAsegurarColumnasPassword($tabla);
+
         $stmt = Conexion::conectar()->prepare("INSERT INTO $tabla(nombre, email, usuario, password, debe_cambiar_password, perfil, foto, rol) 
                                                VALUES (:nombre, :email, :usuario, :password, :debe_cambiar_password, :perfil, :foto, :rol)");
 
@@ -205,6 +207,8 @@ class ModeloUsuarios {
 
     static public function mdlActualizarPasswordUsuario($tabla, $idUsuario, $password, $debeCambiarPassword) {
 
+        self::mdlAsegurarColumnasPassword($tabla);
+
         $stmt = Conexion::conectar()->prepare("UPDATE $tabla
                                                SET password = :password,
                                                    debe_cambiar_password = :debe_cambiar_password,
@@ -225,6 +229,8 @@ class ModeloUsuarios {
 
     static public function mdlGuardarTokenRecuperacion($tabla, $idUsuario, $tokenHash, $expira) {
 
+        self::mdlAsegurarColumnasPassword($tabla);
+
         $stmt = Conexion::conectar()->prepare("UPDATE $tabla
                                                SET password_reset_token = :token,
                                                    password_reset_expires = :expira
@@ -243,6 +249,8 @@ class ModeloUsuarios {
 
     static public function mdlMostrarUsuarioPorToken($tabla, $tokenHash) {
 
+        self::mdlAsegurarColumnasPassword($tabla);
+
         $stmt = Conexion::conectar()->prepare("SELECT * FROM $tabla
                                                WHERE password_reset_token = :token
                                                AND password_reset_expires >= NOW()
@@ -252,6 +260,35 @@ class ModeloUsuarios {
         $stmt->execute();
 
         return $stmt->fetch();
+    }
+
+    static public function mdlAsegurarColumnasPassword($tabla) {
+
+        $conexion = Conexion::conectar();
+        $columnas = array();
+        $stmt = $conexion->query("SHOW COLUMNS FROM $tabla");
+
+        while($fila = $stmt->fetch()){
+            $columnas[] = $fila["Field"];
+        }
+
+        $agregar = array();
+
+        if(!in_array("password_reset_token", $columnas)){
+            $agregar[] = "ADD COLUMN password_reset_token VARCHAR(64) NULL";
+        }
+        if(!in_array("password_reset_expires", $columnas)){
+            $agregar[] = "ADD COLUMN password_reset_expires DATETIME NULL";
+        }
+        if(!in_array("debe_cambiar_password", $columnas)){
+            $agregar[] = "ADD COLUMN debe_cambiar_password TINYINT(1) NOT NULL DEFAULT 0";
+        }
+
+        if(!empty($agregar)){
+            $conexion->exec("ALTER TABLE $tabla ".implode(", ", $agregar));
+        }
+
+        return "ok";
     }
 
     /*=============================================

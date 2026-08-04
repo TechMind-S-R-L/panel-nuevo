@@ -69,16 +69,129 @@ class ControladorUsuarios{
 		return $protocolo."://".$host.$base;
 	}
 
-	static private function ctrEnviarCorreoSistema($destino, $asunto, $mensajeHtml){
+	static private function ctrSmtpConfiguracion(){
+		$host = trim((string)(getenv("TECHMIND_SMTP_HOST") ?: ""));
+		$usuario = trim((string)(getenv("TECHMIND_SMTP_USER") ?: ""));
+		$password = (string)(getenv("TECHMIND_SMTP_PASS") ?: "");
+
+		if($host == "" || $usuario == "" || $password == ""){
+			return null;
+		}
+
+		return array(
+			"host" => $host,
+			"port" => (int)(getenv("TECHMIND_SMTP_PORT") ?: 465),
+			"secure" => strtolower((string)(getenv("TECHMIND_SMTP_SECURE") ?: "ssl")),
+			"user" => $usuario,
+			"pass" => $password,
+			"from_email" => trim((string)(getenv("TECHMIND_SMTP_FROM") ?: $usuario)),
+			"from_name" => trim((string)(getenv("TECHMIND_SMTP_FROM_NAME") ?: "TechMind S.R.L."))
+		);
+	}
+
+	static private function ctrEnviarSmtpHtml($destino, $asunto, $mensajeHtml){
+		$config = self::ctrSmtpConfiguracion();
+		if(!$config){
+			return null;
+		}
+		if(!function_exists("stream_socket_client")){
+			error_log("TechMind Panel SMTP: stream_socket_client no esta disponible.");
+			return false;
+		}
+
+		$seguridad = in_array($config["secure"], array("ssl", "tls"), true) ? $config["secure"] : "ssl";
+		$remote = ($seguridad === "ssl" ? "ssl://" : "").$config["host"].":".max(1, (int)$config["port"]);
+		$socket = @stream_socket_client($remote, $errno, $errstr, 20, STREAM_CLIENT_CONNECT);
+		if(!$socket){
+			error_log("TechMind Panel SMTP: no se pudo conectar - ".$errstr);
+			return false;
+		}
+		stream_set_timeout($socket, 20);
+
+		$leer = function() use ($socket){
+			$respuesta = "";
+			while(($linea = fgets($socket, 515)) !== false){
+				$respuesta .= $linea;
+				if(strlen($linea) < 4 || substr($linea, 3, 1) === " "){
+					break;
+				}
+			}
+			return $respuesta;
+		};
+
+		$cmd = function($comando, $esperado = null) use ($socket, $leer){
+			if($comando !== null){
+				fwrite($socket, $comando."\r\n");
+			}
+			$respuesta = $leer();
+			if($esperado !== null && strpos($respuesta, (string)$esperado) !== 0){
+				throw new Exception("Respuesta SMTP inesperada: ".trim($respuesta));
+			}
+			return $respuesta;
+		};
+
+		try{
+			$leer();
+			$cmd("EHLO techmind.com.bo", "250");
+			if($seguridad === "tls"){
+				$cmd("STARTTLS", "220");
+				if(!stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)){
+					throw new Exception("No se pudo iniciar TLS SMTP.");
+				}
+				$cmd("EHLO techmind.com.bo", "250");
+			}
+			$cmd("AUTH LOGIN", "334");
+			$cmd(base64_encode($config["user"]), "334");
+			$cmd(base64_encode($config["pass"]), "235");
+			$cmd("MAIL FROM:<".$config["from_email"].">", "250");
+			$cmd("RCPT TO:<".$destino.">", "250");
+			$cmd("DATA", "354");
+
+			$fromNombre = "=?UTF-8?B?".base64_encode($config["from_name"])."?=";
+			$asuntoCodificado = "=?UTF-8?B?".base64_encode($asunto)."?=";
+			$mensajeId = bin2hex(random_bytes(12))."@techmind.com.bo";
+			$mensaje = "From: ".$fromNombre." <".$config["from_email"].">\r\n";
+			$mensaje .= "To: <".$destino.">\r\n";
+			$mensaje .= "Subject: ".$asuntoCodificado."\r\n";
+			$mensaje .= "Date: ".date(DATE_RFC2822)."\r\n";
+			$mensaje .= "Message-ID: <".$mensajeId.">\r\n";
+			$mensaje .= "Reply-To: ".$fromNombre." <".$config["from_email"].">\r\n";
+			$mensaje .= "X-Mailer: TechMind Panel\r\n";
+			$mensaje .= "MIME-Version: 1.0\r\n";
+			$mensaje .= "Content-Type: text/html; charset=UTF-8\r\n";
+			$mensaje .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
+			$mensaje .= str_replace("\n.", "\n..", str_replace("\r\n", "\n", $mensajeHtml));
+
+			fwrite($socket, str_replace("\n", "\r\n", $mensaje)."\r\n.\r\n");
+			$respuesta = $leer();
+			if(strpos($respuesta, "250") !== 0){
+				throw new Exception("No se acepto el mensaje SMTP: ".trim($respuesta));
+			}
+			$cmd("QUIT", "221");
+			fclose($socket);
+			return true;
+		}catch(Throwable $e){
+			error_log("TechMind Panel SMTP: ".$e->getMessage());
+			@fclose($socket);
+			return false;
+		}
+	}
+
+	static public function ctrEnviarCorreoSistema($destino, $asunto, $mensajeHtml){
 		if(empty($destino) || !filter_var($destino, FILTER_VALIDATE_EMAIL)){
 			return false;
 		}
 
+		$enviadoSmtp = self::ctrEnviarSmtpHtml($destino, $asunto, $mensajeHtml);
+		if($enviadoSmtp === true){
+			return true;
+		}
+
 		$cabeceras = "MIME-Version: 1.0\r\n";
 		$cabeceras .= "Content-type:text/html;charset=UTF-8\r\n";
-		$cabeceras .= "From: TechMind <no-reply@techmind.local>\r\n";
+		$cabeceras .= "From: TechMind S.R.L. <".(getenv("TECHMIND_SMTP_FROM") ?: "no-reply@techmind.com.bo").">\r\n";
 
-		$enviado = @mail($destino, $asunto, $mensajeHtml, $cabeceras);
+		$enviado = @mail($destino, "=?UTF-8?B?".base64_encode($asunto)."?=", $mensajeHtml, $cabeceras);
 
 		if(!$enviado){
 			$directorioLog = __DIR__ . "/../extensiones/logs";
@@ -92,7 +205,33 @@ class ControladorUsuarios{
 			);
 		}
 
-		return true;
+		return $enviado;
+	}
+
+	static private function ctrPlantillaCorreoAcceso($titulo, $nombre, $texto, $link, $textoBoton){
+		$logo = self::ctrBaseUrl()."/vistas/img/plantilla/logo.png";
+		return '<!doctype html><html><body style="margin:0;background:#f4f7fb;font-family:Arial,sans-serif;color:#14213d">'
+			.'<div style="max-width:640px;margin:0 auto;padding:28px 16px">'
+			.'<div style="background:#fff;border:1px solid #dbe8f7;border-radius:22px;overflow:hidden;box-shadow:0 20px 55px rgba(25,74,145,.12)">'
+			.'<div style="padding:24px;background:linear-gradient(135deg,#eef6ff,#fff)"><img src="'.$logo.'" alt="TechMind" style="max-width:175px;height:auto"></div>'
+			.'<div style="padding:28px"><h1 style="margin:0 0 10px;font-size:24px;color:#10233f">'.htmlspecialchars($titulo, ENT_QUOTES, "UTF-8").'</h1>'
+			.'<p style="font-size:15px;line-height:1.6;color:#51627a">Hola <b>'.htmlspecialchars($nombre, ENT_QUOTES, "UTF-8").'</b>, '.$texto.'</p>'
+			.'<p style="font-size:15px;line-height:1.6;color:#51627a">El enlace estara disponible por 60 minutos.</p>'
+			.'<p style="margin:28px 0"><a href="'.htmlspecialchars($link, ENT_QUOTES, "UTF-8").'" style="display:inline-block;background:#2478d4;color:#fff;text-decoration:none;font-weight:700;border-radius:14px;padding:14px 22px">'.$textoBoton.'</a></p>'
+			.'<p style="font-size:12px;line-height:1.5;color:#7a8799">Si no solicitaste este mensaje, puedes ignorarlo.</p>'
+			.'</div></div></div></body></html>';
+	}
+
+	static private function ctrEnviarLinkPrimerAccesoUsuario($usuario, $link){
+		$mensaje = self::ctrPlantillaCorreoAcceso(
+			"Activa tu acceso a TechMind",
+			$usuario["nombre"],
+			"se creo tu usuario en el sistema administrativo. Presiona el boton para crear tu contrasena personal e ingresar con seguridad.",
+			$link,
+			"Crear mi contrasena"
+		);
+
+		return self::ctrEnviarCorreoSistema($usuario["email"], "Activa tu acceso a TechMind", $mensaje);
 	}
 
 	static private function ctrEnviarCredencialesUsuario($usuario, $passwordTemporal){
@@ -403,17 +542,35 @@ static public function ctrCrearUsuario() {
                 "foto" => $ruta
             );
 
-            $respuesta = ModeloUsuarios::mdlIngresarUsuario($tabla, $datos);
+			$respuesta = ModeloUsuarios::mdlIngresarUsuario($tabla, $datos);
 
             if ($respuesta == "ok") {
-                self::ctrEnviarCredencialesUsuario($datos, $passwordTemporal);
+                $correoEnviado = false;
+                $usuarioCreado = ModeloUsuarios::mdlMostrarUsuarioPorLogin($tabla, $datos["email"]);
+                if(!$usuarioCreado){
+                    $usuarioCreado = ModeloUsuarios::mdlMostrarUsuarioPorLogin($tabla, $datos["usuario"]);
+                }
+                if($usuarioCreado && !empty($usuarioCreado["id"])){
+                    $token = bin2hex(random_bytes(32));
+                    $tokenHash = hash("sha256", $token);
+                    $expira = date("Y-m-d H:i:s", strtotime("+1 hour"));
+                    ModeloUsuarios::mdlGuardarTokenRecuperacion($tabla, (int)$usuarioCreado["id"], $tokenHash, $expira);
+                    $link = self::ctrBaseUrl()."/index.php?recuperarPassword=".$token."&primerAcceso=1";
+                    $correoEnviado = self::ctrEnviarLinkPrimerAccesoUsuario($usuarioCreado, $link);
+                }else{
+                    $correoEnviado = self::ctrEnviarCredencialesUsuario($datos, $passwordTemporal);
+                }
                 if (class_exists("ControladorLogs")) {
                     ControladorLogs::ctrRegistrarLog("crear", "usuarios", "Usuario ".$_POST["nuevoUsuario"]." creado");
                 }
+                $textoCorreoUsuario = $correoEnviado
+                    ? "Se envio un enlace de primer acceso al correo registrado."
+                    : "El usuario fue creado, pero el servidor no confirmo el envio del correo. Revise SMTP o correos-pendientes.log.";
                 echo '<script>
                 swal({
                     type: "success",
                     title: "¡El usuario ha sido guardado correctamente!",
+                    text: "'.$textoCorreoUsuario.'",
                     showConfirmButton: true,
                     confirmButtonText: "Cerrar"
                 }).then(function(result){
@@ -464,13 +621,13 @@ static public function ctrCrearUsuario() {
 			ModeloUsuarios::mdlGuardarTokenRecuperacion($tabla, (int)$usuario["id"], $tokenHash, $expira);
 
 			$link = self::ctrBaseUrl()."/index.php?recuperarPassword=".$token;
-			$mensaje = '
-				<h2>Recuperar contrasena</h2>
-				<p>Hola <b>'.htmlspecialchars($usuario["nombre"], ENT_QUOTES, "UTF-8").'</b>, recibimos una solicitud para cambiar tu contrasena.</p>
-				<p>Usa este enlace durante la siguiente hora:</p>
-				<p><a href="'.$link.'">'.$link.'</a></p>
-				<p>Si no solicitaste este cambio, ignora este mensaje.</p>
-			';
+			$mensaje = self::ctrPlantillaCorreoAcceso(
+				"Recuperar contrasena",
+				$usuario["nombre"],
+				"recibimos una solicitud para cambiar la contrasena de tu cuenta del panel TechMind.",
+				$link,
+				"Cambiar contrasena"
+			);
 
 			self::ctrEnviarCorreoSistema($usuario["email"], "Recuperar contrasena TechMind", $mensaje);
 

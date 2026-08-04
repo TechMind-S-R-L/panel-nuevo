@@ -671,30 +671,19 @@ function tmClienteCrmClase($estado){
           <input type="hidden" name="idClientePasswordWeb" id="idClientePasswordWeb">
           <div class="alert alert-info">
             <b id="nombreClientePasswordWeb">Cliente</b><br>
-            Use esta opcion si el cliente olvido su contrasena web o necesita habilitar su acceso.
+            Use esta opcion si el cliente olvido su contrasena web o necesita habilitar su acceso. El cliente recibira un enlace seguro en su correo.
           </div>
           <div class="form-group">
             <label>Operacion</label>
             <select class="form-control" name="modoPasswordWeb" id="modoPasswordWeb">
-              <option value="generar">Generar contrasena aleatoria y enviar al correo</option>
-              <option value="manual">Escribir contrasena manualmente</option>
+              <option value="enlace">Enviar enlace para crear o cambiar contrasena web</option>
             </select>
           </div>
-          <div id="camposPasswordWebManual" style="display:none;">
-            <div class="form-group">
-              <label>Nueva contrasena</label>
-              <input type="password" class="form-control" name="passwordWebManual" id="passwordWebManual" minlength="6" maxlength="20" placeholder="6 a 20 letras o numeros">
-            </div>
-            <div class="form-group">
-              <label>Confirmar contrasena</label>
-              <input type="password" class="form-control" name="passwordWebConfirmar" id="passwordWebConfirmar" minlength="6" maxlength="20">
-            </div>
-          </div>
-          <p class="cliente-help">Si el servidor no puede enviar correo, la clave quedara guardada en el log de correos pendientes y tambien se mostrara al confirmar.</p>
+          <p class="cliente-help">Por seguridad no se muestra ninguna contrasena en pantalla. El enlace vence en 60 minutos.</p>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-default pull-left" data-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Guardar clave web</button>
+          <button type="submit" class="btn btn-primary"><i class="fa fa-paper-plane"></i> Enviar enlace web</button>
         </div>
       </form>
       <?php ControladorClientes::ctrActualizarPasswordWebCliente(); ?>

@@ -213,9 +213,7 @@ $(document).on("click", ".btnPasswordWebCliente", function(){
 
 	$("#idClientePasswordWeb").val(idCliente);
 	$("#nombreClientePasswordWeb").text(cliente);
-	$("#modoPasswordWeb").val("generar").trigger("change");
-	$("#passwordWebManual").val("");
-	$("#passwordWebConfirmar").val("");
+	$("#modoPasswordWeb").val("enlace");
 	$("#modalVerCliente").modal("hide");
 	$("#modalPasswordWebCliente").modal("show");
 });
@@ -238,12 +236,6 @@ $(document).on("input", "#buscarClienteCards", function(){
 	if(visibles === 0 && $(".clienteCardDetalle").length){
 		$("#clientesCardGrid").append('<div class="cliente-empty cliente-empty-busqueda">No se encontraron clientes con esa busqueda.</div>');
 	}
-});
-
-$(document).on("change", "#modoPasswordWeb", function(){
-	var manual = $(this).val() === "manual";
-	$("#camposPasswordWebManual").toggle(manual);
-	$("#passwordWebManual, #passwordWebConfirmar").prop("required", manual);
 });
 
 $(function(){

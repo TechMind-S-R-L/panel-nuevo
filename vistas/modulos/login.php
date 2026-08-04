@@ -388,7 +388,7 @@ $modoLogin = $tokenRecuperacion != "" ? "reset" : ($mostrarRecuperar ? "recover"
             </div>
 
             <div class="tm-note">
-              Cuando el administrador o el area correspondiente le entregue su usuario, recibira una contrasena temporal en su correo y debera cambiarla al ingresar.
+              Cuando el administrador cree su usuario, recibira un enlace seguro en su correo para crear su contrasena personal.
             </div>
 
             <div class="tm-login-alert-space">
