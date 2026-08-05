@@ -253,13 +253,22 @@ class ModeloUsuarios {
 
         $stmt = Conexion::conectar()->prepare("SELECT * FROM $tabla
                                                WHERE password_reset_token = :token
-                                               AND password_reset_expires >= NOW()
                                                LIMIT 1");
 
         $stmt->bindParam(":token", $tokenHash, PDO::PARAM_STR);
         $stmt->execute();
 
-        return $stmt->fetch();
+        $usuario = $stmt->fetch();
+        if(!$usuario){
+            return false;
+        }
+
+        $expira = strtotime((string)($usuario["password_reset_expires"] ?? ""));
+        if(!$expira || $expira < time()){
+            return false;
+        }
+
+        return $usuario;
     }
 
     static public function mdlAsegurarColumnasPassword($tabla) {

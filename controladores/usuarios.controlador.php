@@ -209,7 +209,8 @@ class ControladorUsuarios{
 	}
 
 	static private function ctrPlantillaCorreoAcceso($titulo, $nombre, $texto, $link, $textoBoton){
-		$logo = self::ctrBaseUrl()."/vistas/img/plantilla/logo.png";
+		$webUrl = rtrim((string)(getenv("TECHMIND_WEB_URL") ?: "https://techmind.com.bo"), "/");
+		$logo = $webUrl."/dist/images/logos/LOGO%20(1).png";
 		return '<!doctype html><html><body style="margin:0;background:#f4f7fb;font-family:Arial,sans-serif;color:#14213d">'
 			.'<div style="max-width:640px;margin:0 auto;padding:28px 16px">'
 			.'<div style="background:#fff;border:1px solid #dbe8f7;border-radius:22px;overflow:hidden;box-shadow:0 20px 55px rgba(25,74,145,.12)">'

@@ -191,6 +191,37 @@ $modoLogin = $tokenRecuperacion != "" ? "reset" : ($mostrarRecuperar ? "recover"
     font-weight:800;
     background:#fff;
   }
+  .tm-input-wrap:has(.tm-password-toggle) .tm-input{
+    padding-right:50px;
+  }
+  .tm-password-toggle{
+    position:absolute;
+    right:8px;
+    top:50%;
+    transform:translateY(-50%);
+    width:38px;
+    height:38px;
+    border:0;
+    border-radius:13px;
+    background:#eef6ff;
+    color:#2478d4;
+    display:grid;
+    place-items:center;
+    cursor:pointer;
+    z-index:3;
+    transition:.18s ease;
+  }
+  .tm-password-toggle:hover,
+  .tm-password-toggle.is-visible{
+    background:#2478d4;
+    color:#fff;
+    box-shadow:0 10px 22px rgba(36,120,212,.24);
+  }
+  .tm-input-wrap .tm-password-toggle i{
+    position:static;
+    transform:none;
+    color:inherit;
+  }
   .tm-input:focus{
     border-color:#1fa7dc;
     box-shadow:0 0 0 4px rgba(31,167,220,.12);
@@ -311,7 +342,10 @@ $modoLogin = $tokenRecuperacion != "" ? "reset" : ($mostrarRecuperar ? "recover"
               <label>Nueva contrasena</label>
               <div class="tm-input-wrap">
                 <i class="fa fa-key"></i>
-                <input type="password" class="form-control tm-input" name="nuevoPasswordReset" minlength="6" maxlength="20" required>
+                <input id="panel-reset-password" type="password" class="form-control tm-input" name="nuevoPasswordReset" minlength="6" maxlength="20" required>
+                <button class="tm-password-toggle" type="button" data-password-toggle="panel-reset-password" aria-label="Mostrar contrasena">
+                  <i class="fa fa-eye"></i>
+                </button>
               </div>
             </div>
 
@@ -319,7 +353,10 @@ $modoLogin = $tokenRecuperacion != "" ? "reset" : ($mostrarRecuperar ? "recover"
               <label>Confirmar contrasena</label>
               <div class="tm-input-wrap">
                 <i class="fa fa-check-circle"></i>
-                <input type="password" class="form-control tm-input" name="confirmarPasswordReset" minlength="6" maxlength="20" required>
+                <input id="panel-reset-password-confirmar" type="password" class="form-control tm-input" name="confirmarPasswordReset" minlength="6" maxlength="20" required>
+                <button class="tm-password-toggle" type="button" data-password-toggle="panel-reset-password-confirmar" aria-label="Mostrar contrasena">
+                  <i class="fa fa-eye"></i>
+                </button>
               </div>
             </div>
 
@@ -406,6 +443,18 @@ $modoLogin = $tokenRecuperacion != "" ? "reset" : ($mostrarRecuperar ? "recover"
 </div>
 
 <script>
+document.addEventListener("click", function(event){
+  var boton = event.target.closest ? event.target.closest("[data-password-toggle]") : null;
+  if(!boton){ return; }
+  var input = document.getElementById(boton.getAttribute("data-password-toggle"));
+  if(!input){ return; }
+  var visible = input.type === "text";
+  input.type = visible ? "password" : "text";
+  boton.classList.toggle("is-visible", !visible);
+  boton.setAttribute("aria-label", visible ? "Mostrar contrasena" : "Ocultar contrasena");
+  boton.innerHTML = visible ? '<i class="fa fa-eye"></i>' : '<i class="fa fa-eye-slash"></i>';
+});
+
 (function(){
   var canvas = document.getElementById("tmLoginParticles");
   if(!canvas){ return; }
