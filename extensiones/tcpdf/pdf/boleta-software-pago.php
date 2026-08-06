@@ -12,9 +12,9 @@ require_once __DIR__ . "/../../../modelos/usuarios.modelo.php";
 
 function swpTxt($valor){ return htmlspecialchars((string)$valor, ENT_QUOTES, "UTF-8"); }
 function swpFechaHora($valor){
-	if(!$valor){ return date("d/m/Y H:i"); }
+	if(!$valor){ return date("d/m/Y"); }
 	$ts = strtotime((string)$valor);
-	return $ts ? date("d/m/Y H:i", $ts) : date("d/m/Y H:i");
+	return $ts ? date("d/m/Y", $ts) : date("d/m/Y");
 }
 
 chdir(__DIR__);
