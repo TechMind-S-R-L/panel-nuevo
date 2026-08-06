@@ -16,7 +16,10 @@ date_default_timezone_set("America/La_Paz");
   <!-- Tell the browser to be responsive to screen width -->
   <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
 
-  <link rel="icon" href="vistas/img/plantilla/logo.ico">
+  <link rel="icon" href="/favicon.ico?v=31" sizes="any">
+  <link rel="icon" type="image/png" href="/favicon.png?v=31">
+  <link rel="shortcut icon" href="/favicon.ico?v=31">
+  <link rel="apple-touch-icon" href="/favicon.png?v=31">
 
    <!--=====================================
   PLUGINS DE CSS

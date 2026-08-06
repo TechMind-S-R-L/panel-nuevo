@@ -11,6 +11,11 @@ require_once __DIR__ . "/../../../controladores/usuarios.controlador.php";
 require_once __DIR__ . "/../../../modelos/usuarios.modelo.php";
 
 function swpTxt($valor){ return htmlspecialchars((string)$valor, ENT_QUOTES, "UTF-8"); }
+function swpFechaHora($valor){
+	if(!$valor){ return date("d/m/Y H:i"); }
+	$ts = strtotime((string)$valor);
+	return $ts ? date("d/m/Y H:i", $ts) : date("d/m/Y H:i");
+}
 
 chdir(__DIR__);
 require_once('tcpdf_include_notaventa.php');
@@ -50,11 +55,16 @@ $conceptoDetalle = $concepto." (".$porcentajePagoActual."% del proyecto)";
 $saldoPendienteReal = max(0, (float)$proyecto["precio_total"] - (float)$proyecto["pago_adelanto"] - (float)$proyecto["pago_final"]);
 $metodoPagoServicio = $pagoServicio["metodo_pago"] ?? ($servicio["metodo_pago"] ?? "");
 $referenciaPagoServicio = $pagoServicio["codigo_transaccion"] ?? ($servicio["codigo_transaccion"] ?? "");
+$fechaPagoServicio = $pagoServicio["fecha_pago"] ?? $pagoServicio["fecha"] ?? $pagoServicio["created_at"] ?? $pagoServicio["fecha_registro"] ?? $servicio["fecha"] ?? $servicio["fecha_servicio"] ?? date("Y-m-d H:i:s");
 $saldoAntesPago = $pagoServicio ? (float)$pagoServicio["saldo_antes"] : (float)$proyecto["precio_total"];
 $saldoDespuesPago = $pagoServicio ? (float)$pagoServicio["saldo_despues"] : $saldoPendienteReal;
 $totalPagado = max(0, (float)$proyecto["precio_total"] - $saldoPendienteReal);
 
 $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+$pdf->SetCreator('TechMind S.R.L.');
+$pdf->SetAuthor('TechMind S.R.L.');
+$pdf->SetTitle('Comprobante de pago de proyecto');
+$pdf->SetSubject($concepto);
 $pdf->AddPage();
 $pdf->SetAlpha(0.08);
 $pdf->Image('images/ICONO.png', 45, 85, 120);
@@ -79,6 +89,8 @@ $pdf->Cell(75, 7, $concepto, 0, 1, 'R');
 $pdf->SetFont('helvetica', '', 9);
 $pdf->SetXY(120, 22);
 $pdf->Cell(75, 6, 'NRO: '.$proyecto["codigo"], 0, 1, 'R');
+$pdf->SetXY(120, 28);
+$pdf->Cell(75, 5, 'FECHA: '.swpFechaHora($fechaPagoServicio), 0, 1, 'R');
 $pdf->SetTextColor(0);
 $pdf->Ln(14);
 
@@ -116,6 +128,7 @@ $html = '
 		<span class="label">Pago recibido</span><br>
 		<span class="monto">Bs '.number_format($monto, 2).'</span><br>
 		'.swpTxt($concepto).'<br><br>
+		Fecha: '.swpTxt(swpFechaHora($fechaPagoServicio)).'<br>
 		Metodo: '.swpTxt($metodoPagoServicio ?: "Efectivo").'<br>
 		Referencia: '.swpTxt($referenciaPagoServicio ?: "-").'<br>
 		Recibido por: '.swpTxt($cajero["nombre"] ?? "TechMind S.R.L.").'
