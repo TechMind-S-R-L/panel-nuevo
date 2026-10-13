@@ -14,6 +14,14 @@ Los cobros se envian por POST con CSRF y una solicitud unica almacenada en `cobr
 
 Las tres tablas nuevas se crean automaticamente al usar el modulo, siguiendo el mecanismo existente del panel. El usuario MySQL necesita permiso `CREATE TABLE`, como para caja e historial de pagos. No es necesario modificar datos existentes ni ejecutar una migracion manual.
 
+## Reportes de servicios
+
+Los reportes, el PDF general/de servicios, el ranking y el importe de servicios del tablero suman los pagos individuales por su fecha de cobro. Incluyen adelantos y amortizaciones aunque quede saldo pendiente. Usan el importe aplicado en Bs, excluyendo cambio; no requieren cerrar caja. La lista de servicios creados se conserva aparte y usa la fecha de creacion.
+
+Los servicios antiguos sin historial se toman de su cabecera. Para software se incluyen unicamente los importes pagados del proyecto que no estan representados en el historial individual, sin duplicarlos. Esos importes se identifican como historicos y utilizan las fechas de adelanto/pago final conservadas en el proyecto (o la fecha de pago/creacion del servicio si faltan). Cuando no existe historial individual, no es posible recuperar el detalle de fechas y cajeros que nunca se guardo.
+
+La consulta solo lee datos; no genera pagos, movimientos ni tablas. Para validar fechas, pagos parciales, liquidaciones, correcciones y compatibilidad historica, ejecutar tambien `tests/reportes-integracion.php` con `COBROS_TEST_SCHEMA`.
+
 ## Validacion local
 
 Con PHP, PDO MySQL, mbstring y una instancia local de MySQL/MariaDB, indicar una base que tenga el esquema actual del panel:

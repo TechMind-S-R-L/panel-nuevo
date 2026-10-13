@@ -2,6 +2,7 @@
 ob_start();
 
 require_once __DIR__ . "/../../../modelos/conexion.php";
+require_once __DIR__ . "/../../../modelos/reportes.modelo.php";
 
 function RotatedTextReporteSistema($pdf, $x, $y, $txt, $angle) {
 	$pdf->StartTransform();
@@ -401,17 +402,7 @@ $ventasCobradas = reporteRows($db,
 	$paramsVentasCobradas
 );
 
-$serviciosCobrados = reporteRows($db,
-	"SELECT s.*, COALESCE(s.fecha_pago, s.fecha) AS fecha_reporte, c.nombre AS cliente, uv.nombre AS vendedor, uc.nombre AS cajero, ut.nombre AS tecnico
-	 FROM servicios_ventas s
-	 LEFT JOIN clientes c ON c.id = s.id_cliente
-	 LEFT JOIN usuarios uv ON uv.id = s.id_vendedor
-	 LEFT JOIN usuarios uc ON uc.id = s.id_cajero
-	 LEFT JOIN usuarios ut ON ut.id = s.id_tecnico
-	 WHERE s.estado_pago = 'aprobado' AND COALESCE(s.fecha_pago, s.fecha) BETWEEN :inicio AND :fin
-	 ORDER BY fecha_reporte DESC, s.id DESC",
-	$params
-);
+$serviciosCobrados = ModeloReportes::mdlCobrosServicios($db, $inicio, $fin);
 
 $compras = reporteRows($db,
 	"SELECT co.*, p.nombre AS proveedor, u.nombre AS usuario
@@ -524,7 +515,7 @@ $totalCapitalVentas = (float)($finanzasVentas["totales"]["capital"] ?? 0);
 $totalImpuestosVentas = (float)($finanzasVentas["totales"]["impuesto"] ?? 0);
 $totalGananciaBrutaVentas = (float)($finanzasVentas["totales"]["ganancia_bruta"] ?? 0);
 $totalGananciaLiquidaVentas = (float)($finanzasVentas["totales"]["ganancia_liquida"] ?? 0);
-$totalServicios = array_sum(array_map(function($row){ return (float)($row["total"] ?? 0); }, $serviciosCobrados));
+$totalServicios = array_sum(array_map(function($row){ return (float)($row["monto_cobrado"] ?? 0); }, $serviciosCobrados));
 $totalVentas = $totalVentasProductos + $totalServicios;
 $totalCompras = array_sum(array_map(function($row){ return (float)($row["total"] ?? 0); }, $compras));
 $totalCotizaciones = array_sum(array_map(function($row){ return (float)($row["total"] ?? 0); }, $cotizaciones));
@@ -646,13 +637,13 @@ if($tipo == "general" || $tipo == "servicios") {
 			reporteText($servicio["tipo_servicio"]),
 			reporteText($servicio["cliente"] ?? "-"),
 			reporteText($servicio["cajero"] ?? "-"),
-			reporteText($servicio["tecnico"] ?? "-"),
-			reporteMoney($servicio["total"]),
+			reporteText(reporteEstado($servicio["tipo_pago"])),
+			reporteMoney($servicio["monto_cobrado"]),
 			reporteText(reporteFechaHoraCorta($servicio["fecha_reporte"] ?? "-"))
 		);
 	}
-	reporteHtmlTable($pdf, array("Codigo", "Servicio", "Cliente", "Cajero", "Tecnico", "Total", "Fecha cobro"), $rows, array(20, 42, 36, 25, 25, 24, 18));
-	reporteTotales($pdf, array("Total servicios" => reporteMoney($totalServicios), "Cantidad de servicios cobrados" => count($serviciosCobrados)));
+	reporteHtmlTable($pdf, array("Codigo", "Servicio", "Cliente", "Cajero", "Concepto", "Cobrado Bs", "Fecha cobro"), $rows, array(18, 33, 31, 24, 31, 24, 29));
+	reporteTotales($pdf, array("Total servicios" => reporteMoney($totalServicios), "Cantidad de cobros de servicios" => count($serviciosCobrados)));
 }
 
 if($tipo == "general" || $tipo == "compras") {
@@ -840,14 +831,7 @@ if($tipo == "general" || $tipo == "ranking") {
 	});
 	$productosMasVendidos = array_slice($productosMasVendidos, 0, 10);
 
-	$serviciosPorTipo = reporteRows($db,
-		"SELECT tipo_servicio, COUNT(*) AS cantidad, COALESCE(SUM(total), 0) AS total
-		 FROM servicios_ventas
-		 WHERE estado_pago = 'aprobado' AND COALESCE(fecha_pago, fecha) BETWEEN :inicio AND :fin
-		 GROUP BY tipo_servicio
-		 ORDER BY total DESC",
-		$params
-	);
+	$serviciosPorTipo = ModeloReportes::agruparServicios($serviciosCobrados);
 
 	reporteSectionTitle($pdf, "PRODUCTOS MAS VENDIDOS");
 	$rows = array();

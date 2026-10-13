@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__.'/../../../modelos/reportes.modelo.php';
 $dbDashboard = Conexion::conectar();
 $idUsuarioDashboard = (int)($_SESSION["id"] ?? 0);
 $nombreDashboard = $_SESSION["nombre"] ?? "Usuario";
@@ -109,7 +110,8 @@ $stockCriticoDashboardSql = "SELECT codigo,
 $stockCeroDashboardCount = dashboardCount($dbDashboard, "SELECT COUNT(*) FROM productos WHERE stock <= 0");
 $stockBajoDashboardCount = dashboardCount($dbDashboard, "SELECT COUNT(*) FROM productos WHERE stock > 0 AND stock <= 3");
 $ventasProductosHoyDashboard = dashboardMoney($dbDashboard, "SELECT COALESCE(SUM(total), 0) FROM ventas WHERE estado_pago = 'aprobado' AND DATE(COALESCE(fecha_pago, fecha)) = CURDATE()");
-$ventasServiciosHoyDashboard = dashboardMoney($dbDashboard, "SELECT COALESCE(SUM(total), 0) FROM servicios_ventas WHERE estado_pago = 'aprobado' AND DATE(COALESCE(fecha_pago, fecha)) = CURDATE()");
+$fechaHoyServiciosDashboard = $dbDashboard->query("SELECT CURDATE()")->fetchColumn();
+$ventasServiciosHoyDashboard = "Bs ".number_format(ModeloReportes::mdlTotalServicios($dbDashboard, $fechaHoyServiciosDashboard." 00:00:00", $fechaHoyServiciosDashboard." 23:59:59"), 2);
 
 switch($rolDashboard){
   case "vendedor":

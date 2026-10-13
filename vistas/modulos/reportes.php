@@ -5,6 +5,7 @@ if(($_SESSION["perfil"] ?? "") != "Administrador"){
   return;
 }
 
+require_once __DIR__.'/../../modelos/reportes.modelo.php';
 $dbReportes = Conexion::conectar();
 $fechaInicialReporte = $_GET["fechaInicial"] ?? date("Y-m-01");
 $fechaFinalReporte = $_GET["fechaFinal"] ?? date("Y-m-d");
@@ -252,17 +253,7 @@ $servicios = tmReporteRows($dbReportes,
   $paramsFecha
 );
 
-$serviciosCobrados = tmReporteRows($dbReportes,
-  "SELECT s.*, COALESCE(s.fecha_pago, s.fecha) AS fecha_reporte, c.nombre AS cliente, uv.nombre AS vendedor, uc.nombre AS cajero, ut.nombre AS tecnico
-   FROM servicios_ventas s
-   LEFT JOIN clientes c ON c.id = s.id_cliente
-   LEFT JOIN usuarios uv ON uv.id = s.id_vendedor
-   LEFT JOIN usuarios uc ON uc.id = s.id_cajero
-   LEFT JOIN usuarios ut ON ut.id = s.id_tecnico
-   WHERE s.estado_pago = 'aprobado' AND COALESCE(s.fecha_pago, s.fecha) BETWEEN :inicio AND :fin
-   ORDER BY fecha_reporte DESC, s.id DESC",
-  $paramsFecha
-);
+$serviciosCobrados = ModeloReportes::mdlCobrosServicios($dbReportes, $inicioReporte, $finReporte);
 
 $compras = tmReporteRows($dbReportes,
   "SELECT co.*, p.nombre AS proveedor, u.nombre AS usuario
@@ -318,7 +309,7 @@ $ventasCapitalCompra = (float)($ventasProductosFinanzas["totales"]["capital"] ??
 $ventasImpuesto16 = (float)($ventasProductosFinanzas["totales"]["impuesto"] ?? 0);
 $ventasGananciaBruta = (float)($ventasProductosFinanzas["totales"]["ganancia_bruta"] ?? 0);
 $ventasGananciaLiquida = (float)($ventasProductosFinanzas["totales"]["ganancia_liquida"] ?? 0);
-$serviciosTotal = array_sum(array_map(function($servicio){ return (float)($servicio["total"] ?? 0); }, $serviciosCobrados));
+$serviciosTotal = array_sum(array_map(function($servicio){ return (float)($servicio["monto_cobrado"] ?? 0); }, $serviciosCobrados));
 $totalVentasGeneral = $ventasProductosTotal + $serviciosTotal;
 $comprasTotal = array_sum(array_map(function($compra){ return (float)($compra["total"] ?? 0); }, $compras));
 $cotizacionesTotal = array_sum(array_map(function($cotizacion){ return (float)($cotizacion["total"] ?? 0); }, $cotizaciones));
@@ -471,14 +462,7 @@ usort($productosMasVendidos, function($a, $b){
 
 $productosMasVendidos = array_slice($productosMasVendidos, 0, 10);
 
-$serviciosPorTipo = tmReporteRows($dbReportes,
-  "SELECT tipo_servicio, COUNT(*) AS cantidad, COALESCE(SUM(total), 0) AS total
-   FROM servicios_ventas
-   WHERE estado_pago = 'aprobado' AND COALESCE(fecha_pago, fecha) BETWEEN :inicio AND :fin
-   GROUP BY tipo_servicio
-   ORDER BY total DESC",
-  $paramsFecha
-);
+$serviciosPorTipo = ModeloReportes::agruparServicios($serviciosCobrados);
 
 ?>
 
@@ -1422,11 +1406,47 @@ $serviciosPorTipo = tmReporteRows($dbReportes,
           <div class="tab-pane" id="repServicios">
             <div class="tm-report-section-head">
               <div>
-                <h3>Servicios vendidos</h3>
-                <p><?php echo count($servicios); ?> servicio(s) creados en el periodo. Total cobrado: <?php echo tmMoney($serviciosTotal); ?>.</p>
+                <h3>Cobros de servicios</h3>
+                <p><?php echo count($serviciosCobrados); ?> cobro(s) en el periodo, incluidos adelantos y amortizaciones. Total cobrado: <?php echo tmMoney($serviciosTotal); ?>. No requiere cerrar caja.</p>
               </div>
               <div class="tm-report-section-actions">
                 <a class="tm-report-btn" target="_blank" href="<?php echo tmReportePdf("servicios", $fechaInicialReporte, $fechaFinalReporte); ?>"><i class="fa fa-print"></i> Imprimir servicios</a>
+              </div>
+            </div>
+
+            <div class="tm-report-card-grid wide">
+              <?php if(count($serviciosCobrados) == 0): ?>
+                <div class="tm-report-empty">Sin cobros de servicios en este rango de fechas.</div>
+              <?php endif; ?>
+              <?php foreach($serviciosCobrados as $cobroServicio): ?>
+                <article class="tm-report-card">
+                  <div class="tm-report-card-head">
+                    <div>
+                      <span class="tm-report-code"><i class="fa fa-hashtag"></i> <?php echo tmE($cobroServicio["codigo"]); ?><?php if($cobroServicio["id_pago"]): ?> / Pago #<?php echo (int)$cobroServicio["id_pago"]; ?><?php endif; ?></span>
+                      <h4><?php echo tmE($cobroServicio["tipo_servicio"]); ?></h4>
+                    </div>
+                    <div class="tm-report-amount"><?php echo tmMoney($cobroServicio["monto_cobrado"]); ?></div>
+                  </div>
+                  <div class="tm-report-card-body">
+                    <div class="tm-report-badges">
+                      <span class="tm-report-badge success"><?php echo tmE(tmEstadoTextoVisible($cobroServicio["tipo_pago"])); ?></span>
+                      <span class="tm-report-badge info"><?php echo tmE($cobroServicio["metodo_cobro"] ?? "-"); ?></span>
+                    </div>
+                    <div class="tm-report-info-grid">
+                      <div class="tm-report-info"><b>Cliente</b><?php echo tmE($cobroServicio["cliente"] ?? "Sin cliente"); ?></div>
+                      <div class="tm-report-info"><b>Cajero del pago</b><?php echo tmE($cobroServicio["cajero"] ?? "-"); ?></div>
+                      <div class="tm-report-info"><b>Fecha del pago</b><?php echo tmFechaReporte($cobroServicio["fecha_reporte"]); ?></div>
+                      <div class="tm-report-info"><b>Total contratado</b><?php echo tmMoney($cobroServicio["total"]); ?></div>
+                    </div>
+                  </div>
+                </article>
+              <?php endforeach; ?>
+            </div>
+
+            <div class="tm-report-section-head">
+              <div>
+                <h3>Servicios creados</h3>
+                <p><?php echo count($servicios); ?> servicio(s) creados en el periodo, incluidos los pendientes de pago.</p>
               </div>
             </div>
 
@@ -1455,7 +1475,7 @@ $serviciosPorTipo = tmReporteRows($dbReportes,
                       <div class="tm-report-info"><b>Vendedor</b><?php echo tmE($servicio["vendedor"] ?? "-"); ?></div>
                       <div class="tm-report-info"><b>Cajero</b><?php echo tmE($servicio["cajero"] ?? "-"); ?></div>
                       <div class="tm-report-info"><b>Creacion</b><?php echo tmFechaReporte($servicio["fecha"] ?? ""); ?></div>
-                      <div class="tm-report-info"><b>Cobro</b><?php echo tmFechaReporte($servicio["fecha_reporte"] ?? ""); ?></div>
+                      <div class="tm-report-info"><b>Cobro</b><?php echo tmFechaReporte($servicio["fecha_pago"] ?? ""); ?></div>
                     </div>
                   </div>
                 </article>
