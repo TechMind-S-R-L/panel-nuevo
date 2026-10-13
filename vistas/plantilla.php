@@ -3204,6 +3204,7 @@ CUERPO DOCUMENTO
          $_GET["ruta"] == "solicitudes-aprobadas" ||
          $_GET["ruta"] == "pagos-ventas" ||
          $_GET["ruta"] == "pagos-servicios" ||
+         $_GET["ruta"] == "correccion-pagos" ||
          $_GET["ruta"] == "caja" ||
          $_GET["ruta"] == "despacho" ||
          $_GET["ruta"] == "logs-sistema" ||

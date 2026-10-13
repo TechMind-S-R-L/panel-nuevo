@@ -820,6 +820,7 @@ function renderTarjetasPagosVentas($ventas, $modo){
             <option value="Tarjeta Debito">Tarjeta Debito</option>
           </select>
         </div>
+        <?php $prefijoDivisa="venta"; include __DIR__."/cobro-divisa.php"; ?>
         <div class="form-group" id="grupoMontoRecibido">
           <label>Monto recibido</label>
           <div class="input-group">
@@ -847,6 +848,7 @@ function renderTarjetasPagosVentas($ventas, $modo){
   </div>
 </div>
 
+<script src="vistas/js/cobros-divisas.js"></script>
 <script>
 $(function(){
   $('[title]').tooltip({container:'body'});
@@ -945,6 +947,7 @@ $(document).on("click", ".btnAprobarPagoVenta", function(e){
   $("#cobroCambio").val("0.00");
   $("#cobroCodigoTransaccion").val("");
   $("#cobroMetodoPago").val("Efectivo").trigger("change");
+  TMCobro.reiniciar("venta");
   $("#modalCobrarVenta").modal("show");
 });
 
@@ -967,14 +970,12 @@ $("#cobroMetodoPago").on("change", function(){
 
 $("#cobroMontoRecibido").on("input change", calcularCambioCobro);
 
-function calcularCambioCobro(){
-  var total = Number($("#cobroTotal").val()) || 0;
-  var recibido = Number($("#cobroMontoRecibido").val()) || 0;
-  var cambio = Math.max(0, recibido - total);
-  $("#cobroCambio").val(cambio.toFixed(2));
-}
+function calcularCambioCobro(){ TMCobro.calcular("venta"); }
+
+TMCobro.iniciar("venta", {recibido:"#cobroMontoRecibido",total:"#cobroTotal",cambio:"#cobroCambio",metodo:"#cobroMetodoPago",boton:"#btnConfirmarCobro",ruta:"pagos-ventas",csrf:<?php echo json_encode(ControladorCobros::csrf()); ?>,solicitud:<?php echo json_encode(bin2hex(random_bytes(32))); ?>,fecha:<?php echo json_encode((new DateTimeImmutable('now',new DateTimeZone('America/La_Paz')))->format('Y-m-d')); ?>});
 
 $("#btnConfirmarCobro").on("click", function(){
+  TMCobro.calcular("venta");
   var idVenta = $("#cobroIdVenta").val();
   var metodo = $("#cobroMetodoPago").val();
   var total = Number($("#cobroTotal").val()) || 0;
@@ -1000,10 +1001,7 @@ $("#btnConfirmarCobro").on("click", function(){
     cancelButtonText: "Cancelar"
   }).then(function(result){
     if(result.value){
-      window.location = "index.php?ruta=pagos-ventas&aprobarPagoVenta=" + idVenta +
-        "&metodoPago=" + encodeURIComponent(metodo) +
-        "&montoRecibido=" + encodeURIComponent(recibido) +
-        "&codigoTransaccion=" + encodeURIComponent(codigoTransaccion);
+      TMCobro.enviar("venta",{id:idVenta,codigo_transaccion:codigoTransaccion});
     }
   });
 });

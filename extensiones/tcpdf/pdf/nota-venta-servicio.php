@@ -102,6 +102,8 @@ $infoTable = <<<EOF
   </tr>
 </table>
 EOF;
+require_once __DIR__.'/pdf-cobro-divisa.php';
+$infoTable .= tmPdfCobroDivisa('servicio', $idServicio);
 $pdf->writeHTML($infoTable, false, false, false, false, '');
 
 $pdf->Ln(5);

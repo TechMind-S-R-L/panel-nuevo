@@ -2317,6 +2317,9 @@ if($perfilMenu == "Administrador"){
           <a href="#"><i class="fa fa-credit-card"></i> <span>Gestion de Cobros</span><?php echo tmMenuBadge($menuParentBadges["cobros"]); ?><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
           <ul class="treeview-menu">
             <li><a href="caja"><i class="fa fa-calculator"></i> Control de Caja</a></li>
+            <?php if ($esAdminRealMenu) : ?>
+              <li><a href="correccion-pagos"><i class="fa fa-pencil-square-o"></i> Correccion de Pagos</a></li>
+            <?php endif; ?>
             <li><a href="pagos-ventas"><i class="fa fa-money"></i> Cobro de Ventas <?php echo tmMenuBadge($menuBadges["pagos-ventas"]); ?></a></li>
             <li><a href="pagos-servicios"><i class="fa fa-wrench"></i> Cobro de Servicios <?php echo tmMenuBadge($menuBadges["pagos-servicios"]); ?></a></li>
           </ul>

@@ -13,6 +13,7 @@ require_once "controladores/proyectos.controlador.php";
 require_once "controladores/cotizacion.controlador.php";
 require_once "controladores/logs.controlador.php";
 require_once "controladores/caja.controlador.php";
+require_once "controladores/cobros.controlador.php";
 require_once "controladores/web-publicaciones.controlador.php";
 require_once "controladores/web-consultas.controlador.php";
 require_once "controladores/empresa-boletas.controlador.php";
@@ -31,6 +32,7 @@ require_once "modelos/cotizacion.modelo.php";
 require_once "modelos/ModeloInventario.php";
 require_once "modelos/logs.modelo.php";
 require_once "modelos/caja.modelo.php";
+require_once "modelos/cobros.modelo.php";
 require_once "modelos/web-publicaciones.modelo.php";
 require_once "modelos/web-consultas.modelo.php";
 

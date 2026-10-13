@@ -170,64 +170,7 @@ class ControladorVentas{
 	}
 
 	static public function ctrAprobarPagoVenta(){
-		if(isset($_GET["aprobarPagoVenta"])){
-			if($_SESSION["perfil"] != "Administrador" && $_SESSION["rol"] != "cajero"){
-				return;
-			}
-			if(!ControladorCaja::ctrPuedeOperar()){
-				echo '<script>swal({type:"warning",title:"Debe abrir su caja",text:"Registre el efectivo inicial antes de realizar cobros.",confirmButtonText:"Ir a caja"}).then(function(){window.location="caja";});</script>';
-				return;
-			}
-
-			$idVenta = (int)$_GET["aprobarPagoVenta"];
-			$item = "id";
-			$venta = ModeloVentas::mdlMostrarVentas("ventas", $item, $idVenta);
-			$total = (float)($venta["total"] ?? 0);
-			$metodoPago = $_GET["metodoPago"] ?? "Efectivo";
-			$montoRecibido = isset($_GET["montoRecibido"]) ? (float)$_GET["montoRecibido"] : $total;
-			$cambio = max(0, $montoRecibido - $total);
-
-			$datosPago = array(
-				"id" => $idVenta,
-				"id_cajero" => $_SESSION["id"],
-				"metodo_pago" => $metodoPago,
-				"monto_recibido" => $montoRecibido,
-				"cambio" => $cambio,
-				"codigo_transaccion" => $_GET["codigoTransaccion"] ?? ""
-			);
-
-			$respuesta = ModeloVentas::mdlCambiarEstadoPago($datosPago);
-
-			if($respuesta == "ok" && class_exists("ControladorLogs")){
-				ControladorLogs::ctrRegistrarLog("aprobar_pago", "ventas", "Pago aprobado para venta ".$idVenta." con ".$metodoPago);
-			}
-			if($respuesta == "ok"){
-				ControladorCaja::ctrRegistrarMovimiento(array(
-					"tipo" => "ingreso",
-					"origen" => "venta",
-					"referencia_tipo" => "venta",
-					"id_referencia" => $idVenta,
-					"codigo_referencia" => $venta["codigo"] ?? "",
-					"metodo_pago" => $metodoPago,
-					"monto" => $total,
-					"descripcion" => "Cobro de venta ".($venta["codigo"] ?? $idVenta)
-				));
-			}
-
-			echo '<script>
-				swal({
-					type: "success",
-					title: "Pago aprobado correctamente",
-					showConfirmButton: true,
-					confirmButtonText: "Cerrar"
-				}).then(function(result){
-					if(result.value){
-							window.open("extensiones/tcpdf/pdf/boleta-despacho.php?idVenta='.$idVenta.'&codigo='.$venta["codigo"].'", "_blank");
-						window.location = "pagos-ventas";
-					}
-				})
-			</script>';
-		}
+		ControladorCobros::ctrCobrar("venta");
 	}
 
 	static public function ctrEntregarVenta(){

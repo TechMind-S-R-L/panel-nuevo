@@ -1020,6 +1020,7 @@ function renderTarjetasCobrosServicio($servicios, $modo){
       </div>
       <div class="form-group"><label>Total</label><div class="input-group"><span class="input-group-addon">Bs</span><input type="text" class="form-control" id="cobroServicioTotal" readonly></div></div>
       <div class="form-group"><label>Metodo de pago</label><select class="form-control" id="cobroServicioMetodo"><option value="Efectivo">Efectivo</option><option value="QR">QR</option><option value="Tarjeta Credito">Tarjeta Credito</option><option value="Tarjeta Debito">Tarjeta Debito</option></select></div>
+      <?php $prefijoDivisa="servicio"; include __DIR__."/cobro-divisa.php"; ?>
       <div class="form-group" id="grupoServicioRecibido"><label>Monto recibido</label><div class="input-group"><span class="input-group-addon">Bs</span><input type="number" class="form-control" id="cobroServicioRecibido" min="0" step="0.01"></div></div>
       <div class="form-group"><label>Cambio</label><div class="input-group"><span class="input-group-addon">Bs</span><input type="text" class="form-control" id="cobroServicioCambio" readonly></div></div>
       <div class="form-group" id="grupoServicioTransaccion" style="display:none"><label>Codigo / referencia</label><input type="text" class="form-control" id="cobroServicioTransaccion"></div>
@@ -1028,6 +1029,7 @@ function renderTarjetasCobrosServicio($servicios, $modo){
   </div></div>
 </div>
 
+<script src="vistas/js/cobros-divisas.js"></script>
 <script>
 $(function(){
   $('[title]').tooltip({container:'body'});
@@ -1192,6 +1194,7 @@ $(document).on("click", ".btnCobrarServicio", function(e){
   $("#cobroServicioCambio").val("0.00");
   $("#cobroServicioTransaccion").val("");
   $("#cobroServicioMetodo").val("Efectivo").trigger("change");
+  TMCobro.reiniciar("servicio");
   $("#modalCobrarServicio").modal("show");
 });
 
@@ -1218,13 +1221,12 @@ $("#cobroServicioManoObra").on("input change", function(){
   $("#cobroServicioRecibido").val(total.toFixed(2));
   calcularCambioServicio();
 });
-function calcularCambioServicio(){
-  var total = Number($("#cobroServicioTotal").val()) || 0;
-  var recibido = Number($("#cobroServicioRecibido").val()) || 0;
-  $("#cobroServicioCambio").val(Math.max(0, recibido - total).toFixed(2));
-}
+function calcularCambioServicio(){ TMCobro.calcular("servicio"); }
+
+TMCobro.iniciar("servicio",{recibido:"#cobroServicioRecibido",total:"#cobroServicioTotal",cambio:"#cobroServicioCambio",metodo:"#cobroServicioMetodo",parcial:"#cobroServicioPermiteParcial",boton:"#btnConfirmarCobroServicio",ruta:"pagos-servicios",csrf:<?php echo json_encode(ControladorCobros::csrf()); ?>,solicitud:<?php echo json_encode(bin2hex(random_bytes(32))); ?>,fecha:<?php echo json_encode((new DateTimeImmutable('now',new DateTimeZone('America/La_Paz')))->format('Y-m-d')); ?>});
 
 $("#btnConfirmarCobroServicio").on("click", function(){
+  TMCobro.calcular("servicio");
   var total = Number($("#cobroServicioTotal").val()) || 0;
   var recibido = Number($("#cobroServicioRecibido").val()) || 0;
   var permiteParcial = $("#cobroServicioPermiteParcial").val() === "1";
@@ -1236,11 +1238,7 @@ $("#btnConfirmarCobroServicio").on("click", function(){
     swal({type:"error", title:"Monto insuficiente", confirmButtonText:"Cerrar"});
     return;
   }
-  window.location = "index.php?ruta=pagos-servicios&aprobarPagoServicio=" + $("#cobroIdServicio").val() +
-    "&metodoPago=" + encodeURIComponent($("#cobroServicioMetodo").val()) +
-    "&montoRecibido=" + encodeURIComponent(recibido) +
-    "&manoObraServicio=" + encodeURIComponent($("#cobroServicioManoObra").val() || "0") +
-    "&codigoTransaccion=" + encodeURIComponent($("#cobroServicioTransaccion").val());
+  TMCobro.enviar("servicio",{id:$("#cobroIdServicio").val(),mano_obra:$("#cobroServicioManoObra").val() || "0",codigo_transaccion:$("#cobroServicioTransaccion").val()});
 });
 </script>
 

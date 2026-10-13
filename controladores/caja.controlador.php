@@ -154,6 +154,9 @@ class ControladorCaja{
 		));
 
 		if($respuesta === "ok" && class_exists("ControladorLogs")){
+			$cierreActual = ModeloCaja::mdlResumenApertura((int)$resumen["id"]);
+			$esperado = (float)$cierreActual["monto_esperado_cierre"];
+			$diferencia = (float)$cierreActual["diferencia"];
 			ControladorLogs::ctrRegistrarLog("cierre_caja", "caja", "Caja cerrada. Esperado Bs ".number_format($esperado, 2, ".", "").", contado Bs ".number_format($contado, 2, ".", "").", diferencia Bs ".number_format($diferencia, 2, ".", ""));
 		}
 		return $respuesta;

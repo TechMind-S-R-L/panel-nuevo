@@ -54,6 +54,8 @@ $porcentajePagoActual = (float)$proyecto["precio_total"] > 0 ? number_format(($m
 $conceptoDetalle = $concepto." (".$porcentajePagoActual."% del proyecto)";
 $saldoPendienteReal = max(0, (float)$proyecto["precio_total"] - (float)$proyecto["pago_adelanto"] - (float)$proyecto["pago_final"]);
 $metodoPagoServicio = $pagoServicio["metodo_pago"] ?? ($servicio["metodo_pago"] ?? "");
+require_once __DIR__.'/pdf-cobro-divisa.php';
+$detalleDivisa = $pagoServicio ? tmPdfCobroDivisa('pago_servicio', $pagoServicio['id']) : tmPdfCobroDivisa('servicio', $idServicio);
 $referenciaPagoServicio = $pagoServicio["codigo_transaccion"] ?? ($servicio["codigo_transaccion"] ?? "");
 $fechaPagoServicio = $pagoServicio["fecha_pago"] ?? $pagoServicio["fecha"] ?? $pagoServicio["created_at"] ?? $pagoServicio["fecha_registro"] ?? $servicio["fecha"] ?? $servicio["fecha_servicio"] ?? date("Y-m-d H:i:s");
 $saldoAntesPago = $pagoServicio ? (float)$pagoServicio["saldo_antes"] : (float)$proyecto["precio_total"];
@@ -135,7 +137,7 @@ $html = '
 	</td>
 </tr>
 </table>
-<br><br>
+<br>'. $detalleDivisa .'<br>
 
 <table class="tabla" cellpadding="6" cellspacing="0">
 <tr>

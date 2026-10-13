@@ -232,6 +232,17 @@ class ModeloCaja{
 
 		try{
 			$conexion->beginTransaction();
+			$apertura = $conexion->prepare("SELECT monto_inicial FROM caja_aperturas WHERE id = ? AND id_cajero = ? AND estado = 'abierta' FOR UPDATE");
+			$apertura->execute(array((int)$datos["id"], (int)$datos["id_cajero"]));
+			$fondo = $apertura->fetchColumn();
+			if($fondo === false){
+				$conexion->rollBack();
+				return "error";
+			}
+			$movimientos = $conexion->prepare("SELECT COALESCE(SUM(CASE WHEN tipo = 'ingreso' THEN monto ELSE -monto END), 0) FROM caja_movimientos WHERE id_apertura = ? AND afecta_efectivo = 1");
+			$movimientos->execute(array((int)$datos["id"]));
+			$datos["esperado"] = round((float)$fondo + (float)$movimientos->fetchColumn(), 2);
+			$datos["diferencia"] = round((float)$datos["contado"] - $datos["esperado"], 2);
 			$stmt = $conexion->prepare(
 				"UPDATE caja_aperturas
 				 SET estado = 'cerrada',

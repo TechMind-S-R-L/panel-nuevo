@@ -187,7 +187,7 @@ function tmCajaOrigen($origen){
           <div class="caja-panel">
             <div class="caja-panel-head"><h3><i class="fa fa-lock"></i> Cerrar turno</h3></div>
             <div class="caja-panel-body caja-actions">
-              <div class="caja-note">Cuente únicamente el efectivo físico existente en caja. QR, tarjetas y transferencias ya están separados del arqueo.</div>
+              <div class="caja-note">Cuente el efectivo físico de caja. Sume los dólares por su equivalente en Bs al tipo de cambio registrado en cada cobro. QR, tarjetas y transferencias están separados del arqueo.</div>
               <button class="btn btn-danger" data-toggle="modal" data-target="#modalCerrarCaja" style="margin-top:10px"><i class="fa fa-calculator"></i> Realizar arqueo y cerrar</button>
             </div>
           </div>
@@ -234,7 +234,7 @@ function tmCajaOrigen($origen){
         </div>
         <div class="modal-body">
           <div class="alert alert-info"><strong>Efectivo esperado:</strong> Bs <?php echo number_format((float)$resumenCaja["efectivo_esperado"],2); ?></div>
-          <div class="form-group"><label>Efectivo contado físicamente</label><div class="input-group"><span class="input-group-addon">Bs</span><input type="number" class="form-control input-lg" id="montoContadoCaja" name="montoContadoCaja" min="0" step="0.01" required></div></div>
+          <div class="form-group"><label>Efectivo contado (Bs + equivalente de USD)</label><div class="input-group"><span class="input-group-addon">Bs</span><input type="number" class="form-control input-lg" id="montoContadoCaja" name="montoContadoCaja" min="0" step="0.01" required></div></div>
           <div class="form-group"><label>Diferencia calculada</label><div class="input-group"><span class="input-group-addon">Bs</span><input type="text" class="form-control" id="diferenciaCierreCaja" readonly value="0.00"></div></div>
           <div class="form-group"><label>Observación de cierre</label><textarea class="form-control" name="observacionCierreCaja" rows="3" maxlength="500" placeholder="Explique cualquier sobrante o faltante"></textarea></div>
         </div>
